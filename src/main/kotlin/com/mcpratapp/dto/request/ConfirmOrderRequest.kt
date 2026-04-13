@@ -5,8 +5,7 @@ import jakarta.validation.constraints.NotNull
 import java.util.UUID
 
 data class ConfirmOrderRequest(
-    @NotNull(message = "order_id não pode ser nulo")
     val orderId: UUID,
-    @NotNull(message = "O método de pagamento não pode ser nulo")
+    @field:NotNull(message = "O método de pagamento não pode ser nulo")
     val paymentMethod: PaymentMethod
 )
