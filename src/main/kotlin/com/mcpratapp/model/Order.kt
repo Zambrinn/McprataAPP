@@ -57,7 +57,8 @@ enum class OrderStatus {
     CONFIRMED,
     SENT,
     DELIVERED,
-    CANCELED
+    CANCELED,
+    COMPLETED
 }
 
 @Entity

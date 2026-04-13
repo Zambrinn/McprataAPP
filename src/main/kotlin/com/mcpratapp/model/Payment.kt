@@ -43,6 +43,6 @@ enum class PaymentMethod {
 
 enum class PaymentStatus {
     PENDING,
-    CONFIRMED,
-    FAILED
+    FAILED,
+    PAID
 }
