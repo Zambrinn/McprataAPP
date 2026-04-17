@@ -6,6 +6,7 @@ import com.mcpratapp.model.User
 import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.UUID
@@ -13,7 +14,8 @@ import java.util.UUID
 @Service
 @Transactional
 class UserService (
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder
 ) {
     fun createUser(request: UserRequest): UserResponse {
         userRepository.findByEmail(request.email)?.let {
@@ -23,13 +25,17 @@ class UserService (
         val userToSave = User(
             username = request.name,
             email = request.email,
-            password = request.password,
-            role = request.role,
-            createdAt = LocalDateTime.now()
+            password = passwordEncoder.encode(request.password)
+                ?: throw IllegalStateException("Falha ao codificar a senha"),
+            role = request.role
         )
-
+        
         val savedUser = userRepository.save(userToSave)
         return savedUser.toResponse()
+    }
+
+    fun findByEmail(email: String): User? {
+        return userRepository.findByEmail(email)
     }
 
     fun getAllUsers(): List<UserResponse> {
@@ -48,17 +54,12 @@ class UserService (
         val existingUser = userRepository.findByIdOrNull(userId)
             ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
 
-        val updatedUser = User(
-            id = existingUser.id,
-            username = request.name,
-            email = request.email,
-            password = request.password,
-            role = request.role,
-            createdAt = existingUser.createdAt,
-            updatedAt = LocalDateTime.now()
-        )
+        existingUser.username = request.name
+        existingUser.email = request.email
+        existingUser.password = request.password
+        existingUser.role = request.role
 
-        return userRepository.save(updatedUser).toResponse()
+        return userRepository.save(existingUser).toResponse()
     }
 
     fun deleteUser(userId: UUID) {
@@ -74,7 +75,7 @@ class UserService (
             name = this.username,
             email = this.email,
             role = this.role,
-            createdAt = this.createdAt
+            createdAt = this.createdAt ?: LocalDateTime.now()
         )
     }
 }
