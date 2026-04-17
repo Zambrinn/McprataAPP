@@ -14,8 +14,8 @@ import java.util.UUID
 @Entity
 @Table(name = "products", indexes = [
     Index(
-        name = "idx_code",
-        columnList = "code",
+        name = "idx_sku",
+        columnList = "sku",
         unique = true)])
 class Product (
     @Id
