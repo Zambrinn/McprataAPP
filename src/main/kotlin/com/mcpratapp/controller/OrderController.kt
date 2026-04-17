@@ -47,7 +47,6 @@ class OrderController (
         return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
-
     @GetMapping
     fun getOrders(): List<OrderResponse> {
         return orderService.getOrders()

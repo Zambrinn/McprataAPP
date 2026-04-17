@@ -56,6 +56,7 @@ class OrderService (
         val existingProduct = productRepository.findById(productId)
             .orElseThrow { IllegalArgumentException("Produto não encontrado.") }
         val vendorId = existingOrder.vendor.id
+            ?: throw IllegalArgumentException("Vendedor sem ID inválido.")
         val disponibleStock = existingProduct.totalQuantity - existingProduct.reservedQuantity
         val productVendorValidation = productVendorRepository.findByVendorIdAndProductId(vendorId, productId)
             ?: throw IllegalArgumentException("Este vendedor não vende este produto.")
@@ -167,7 +168,7 @@ class OrderService (
         return OrderResponse(
             id = this.id!!,
             clientId = this.client.id,
-            vendorId = this.vendor.id,
+            vendorId = this.vendor.id ?: throw IllegalArgumentException("Vendedor sem ID inválido."),
             status = this.status,
             totalAmount = this.totalAmount,
             items = this.items.map { convertOrderItemToDto(it) },
