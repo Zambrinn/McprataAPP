@@ -56,7 +56,7 @@ class UserService (
 
         existingUser.username = request.name
         existingUser.email = request.email
-        existingUser.password = request.password
+        existingUser.password = passwordEncoder.encode(request.password).toString()
         existingUser.role = request.role
 
         return userRepository.save(existingUser).toResponse()

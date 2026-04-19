@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
 class UserController (
     private val userService: UserService
 ) {
