@@ -4,7 +4,6 @@ import java.util.UUID
 
 data class AuthResponse(
     val token: String,
-    val email: String,
-    val userId: UUID,
+    val user: UserResponse,
     val expiresIn: Long
 )
