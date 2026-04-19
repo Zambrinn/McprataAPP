@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/auth")
 @RestController
 class AuthController(
     @Value($$"${app.jwt.expiration:86400000}")
@@ -38,10 +38,10 @@ class AuthController(
         }
 
         val token = jwtProvider.generateToken(foundUser.email, foundUser.id.toString())
+        val userResponse = userService.getUserById(foundUser.id!!)
         return ResponseEntity.ok(AuthResponse(
             token = token,
-            email = foundUser.email,
-            userId = foundUser.id!!,
+            user = userResponse,
             expiresIn = expiration
         ))
     }
@@ -59,19 +59,13 @@ class AuthController(
             role = request.role
         )
 
-        val createdUser = userService.createUser(userRequest)
+        val userResponse = userService.createUser(userRequest)
 
-        println("DEBUG - createdUser: $createdUser")
-        println("DEBUG - createdUser.id: ${createdUser.id}")
-        println("DEBUG - createdUser.email: ${createdUser.email}")
-
-        val token = jwtProvider.generateToken(createdUser.email, createdUser.id.toString())
-        println("DEBUG - token: $token")
+        val token = jwtProvider.generateToken(userResponse.email, userResponse.id.toString())
         return ResponseEntity.status(HttpStatus.CREATED).body(
             AuthResponse(
                 token = token,
-                email = createdUser.email,
-                userId = createdUser.id,
+                user = userResponse,
                 expiresIn = expiration
             )
         )
