@@ -1,6 +1,7 @@
 package com.mcpratapp.service
 
 import com.mcpratapp.dto.request.UserRequest
+import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
 import com.mcpratapp.model.User
 import com.mcpratapp.repository.UserRepository
@@ -50,14 +51,17 @@ class UserService (
         return foundUser.toResponse()
     }
 
-    fun updateUser(userId: UUID, request: UserRequest): UserResponse {
+    fun updateUser(userId: UUID, request: UserUpdateRequest): UserResponse {
         val existingUser = userRepository.findByIdOrNull(userId)
             ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
 
         existingUser.username = request.name
         existingUser.email = request.email
-        existingUser.password = passwordEncoder.encode(request.password).toString()
         existingUser.role = request.role
+
+        request.password
+            ?.takeIf { it.isNotBlank() }
+            ?.let { existingUser.password = passwordEncoder.encode(it).toString()    }
 
         return userRepository.save(existingUser).toResponse()
     }
