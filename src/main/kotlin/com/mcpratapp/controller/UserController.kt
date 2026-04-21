@@ -1,6 +1,7 @@
 package com.mcpratapp.controller
 
 import com.mcpratapp.dto.request.UserRequest
+import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
 import com.mcpratapp.service.UserService
 import jakarta.validation.Valid
@@ -34,20 +35,20 @@ class UserController (
     }
 
     @GetMapping("/{id}")
-    fun getUserById(@Valid @PathVariable userId: UUID): ResponseEntity<UserResponse> {
+    fun getUserById(@Valid @PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
         val foundUser = userService.getUserById(userId)
         return foundUser?.let { user -> ResponseEntity.ok(user) }
             ?: ResponseEntity.notFound().build()
     }
 
     @PutMapping("/{id}")
-    fun updateUser(@PathVariable userId: UUID, @Valid @RequestBody request: UserRequest): ResponseEntity<*>? {
-        val updatedUser = userService.updateUser(userId, request)
-        return ResponseEntity.ok(updatedUser)
+    fun updateUser(@PathVariable("id") userId: UUID,
+                   @Valid @RequestBody request: UserUpdateRequest): ResponseEntity<UserResponse>? {
+        return ResponseEntity.ok(userService.updateUser(userId, request))
     }
 
     @DeleteMapping("/{id}")
-    fun deleteUser(@PathVariable userId: UUID): Unit {
+    fun deleteUser(@PathVariable("id") userId: UUID): Unit {
         val foundUser = userService.getUserById(userId)
         val deletedUser = userService.deleteUser(userId)
         return deletedUser
