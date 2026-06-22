@@ -33,6 +33,10 @@ class User(
     @Column(nullable = false)
     var role: Role = Role.VENDOR,
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var status: UserStatus = UserStatus.ACTIVE,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null,
@@ -45,4 +49,10 @@ class User(
 enum class Role {
     ADMIN,
     VENDOR
+}
+
+enum class UserStatus {
+    ACTIVE,
+    INACTIVE,
+    DELETED
 }

@@ -1,6 +1,7 @@
 package com.mcpratapp.dto.response
 
 import com.mcpratapp.model.Role
+import com.mcpratapp.model.UserStatus
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -9,6 +10,7 @@ data class UserResponse(
     val name: String,
     val email: String,
     val role: Role,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val status: UserStatus
 )
 

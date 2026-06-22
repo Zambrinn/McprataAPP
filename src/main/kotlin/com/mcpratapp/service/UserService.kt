@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.UserRequest
 import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
 import com.mcpratapp.model.User
+import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
@@ -55,6 +56,16 @@ class UserService (
         val existingUser = userRepository.findByIdOrNull(userId)
             ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
 
+        if (existingUser.status != UserStatus.ACTIVE) {
+            throw IllegalArgumentException("Não é possível editar usuários desativados.")
+        }
+
+        val emailOwner = userRepository.findByEmail(request.email)
+
+        if (emailOwner != null && emailOwner.id != existingUser.id) {
+            throw IllegalArgumentException("Email já cadastrado.")
+        }
+
         existingUser.username = request.name
         existingUser.email = request.email
         existingUser.role = request.role
@@ -63,6 +74,35 @@ class UserService (
             ?.takeIf { it.isNotBlank() }
             ?.let { existingUser.password = passwordEncoder.encode(it).toString()    }
 
+        return userRepository.save(existingUser).toResponse()
+    }
+
+    fun deactivateUser(userId: UUID): UserResponse {
+        val existingUser = userRepository.findByIdOrNull(userId)
+            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+
+        if (existingUser.status != UserStatus.ACTIVE) {
+            throw IllegalStateException("Somente usuários ativos podem ser desativados.")
+        }
+        
+        existingUser.status = UserStatus.INACTIVE
+        return userRepository.save(existingUser).toResponse()
+    }
+
+    fun restoreUser(userId: UUID): UserResponse {
+        val existingUser = userRepository.findByIdOrNull(userId)
+            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+
+        if (existingUser.status == UserStatus.ACTIVE) {
+            throw IllegalStateException("O usuário já está ativo.")
+        }
+
+        val emailOwner = userRepository.findByEmail(existingUser.email)
+        if (emailOwner != null && emailOwner.id != existingUser.id && emailOwner.status == UserStatus.ACTIVE) {
+            throw IllegalStateException("Já existe um usuário ativo com esse e-mail.")
+        } 
+
+        existingUser.status = UserStatus.ACTIVE
         return userRepository.save(existingUser).toResponse()
     }
 
@@ -79,7 +119,8 @@ class UserService (
             name = this.username,
             email = this.email,
             role = this.role,
-            createdAt = this.createdAt ?: LocalDateTime.now()
+            createdAt = this.createdAt ?: LocalDateTime.now(),
+            status = this.status
         )
     }
 }

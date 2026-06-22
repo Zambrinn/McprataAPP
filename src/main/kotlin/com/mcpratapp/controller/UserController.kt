@@ -47,6 +47,16 @@ class UserController (
         return ResponseEntity.ok(userService.updateUser(userId, request))
     }
 
+    @PutMapping("/{id}/deactivate")
+    fun deactivateUser(@PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
+        return ResponseEntity.ok(userService.deactivateUser(userId))
+    }
+
+    @PutMapping("/{id}/restore")
+    fun restoreUser(@PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
+        return ResponseEntity.ok(userService.restoreUser(userId))
+    }
+
     @DeleteMapping("/{id}")
     fun deleteUser(@PathVariable("id") userId: UUID): Unit {
         val foundUser = userService.getUserById(userId)
