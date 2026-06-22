@@ -3,6 +3,8 @@ package com.mcpratapp.service
 import com.mcpratapp.dto.request.UserRequest
 import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
+import com.mcpratapp.exception.ConflictException
+import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.User
 import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.UserRepository
@@ -21,7 +23,7 @@ class UserService (
 ) {
     fun createUser(request: UserRequest): UserResponse {
         userRepository.findByEmail(request.email)?.let {
-            throw IllegalArgumentException("Email já cadastrado.")
+            throw ConflictException("Email já cadastrado.")
         }
 
         val userToSave = User(
@@ -47,23 +49,23 @@ class UserService (
 
     fun getUserById(userId: UUID): UserResponse {
         val foundUser = userRepository.findByIdOrNull(userId)
-            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+            ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
         return foundUser.toResponse()
     }
 
     fun updateUser(userId: UUID, request: UserUpdateRequest): UserResponse {
         val existingUser = userRepository.findByIdOrNull(userId)
-            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+            ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
         if (existingUser.status != UserStatus.ACTIVE) {
-            throw IllegalArgumentException("Não é possível editar usuários desativados.")
+            throw ConflictException("Não é possível editar usuários desativados.")
         }
 
         val emailOwner = userRepository.findByEmail(request.email)
 
         if (emailOwner != null && emailOwner.id != existingUser.id) {
-            throw IllegalArgumentException("Email já cadastrado.")
+            throw ConflictException("Email já cadastrado.")
         }
 
         existingUser.username = request.name
@@ -79,10 +81,10 @@ class UserService (
 
     fun deactivateUser(userId: UUID): UserResponse {
         val existingUser = userRepository.findByIdOrNull(userId)
-            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+            ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
         if (existingUser.status != UserStatus.ACTIVE) {
-            throw IllegalStateException("Somente usuários ativos podem ser desativados.")
+            throw ConflictException("Somente usuários ativos podem ser desativados.")
         }
         
         existingUser.status = UserStatus.INACTIVE
@@ -91,10 +93,10 @@ class UserService (
 
     fun restoreUser(userId: UUID): UserResponse {
         val existingUser = userRepository.findByIdOrNull(userId)
-            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+            ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
         if (existingUser.status == UserStatus.ACTIVE) {
-            throw IllegalStateException("O usuário já está ativo.")
+            throw ConflictException("O usuário já está ativo.")
         }
 
         val emailOwner = userRepository.findByEmail(existingUser.email)
@@ -108,7 +110,7 @@ class UserService (
 
     fun deleteUser(userId: UUID) {
         val foundUser = userRepository.findByIdOrNull(userId)
-            ?: throw IllegalArgumentException("Usuário com id: ${userId} não encontrado.")
+            ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
         return userRepository.delete(foundUser)
     }
