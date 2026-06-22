@@ -28,10 +28,10 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { authorize ->
-                logger.info("🔐 SecurityConfig - Configurando autorização de requisições")
+                logger.info("Security config")
                 authorize
                     .requestMatchers("/auth/**").permitAll()
-                    .requestMatchers("/users").permitAll()
+                    .requestMatchers("/users", "/users/**").hasRole("ADMIN")
                     .requestMatchers("/orders/**").permitAll()
                     .requestMatchers("/payments/**").permitAll()
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro

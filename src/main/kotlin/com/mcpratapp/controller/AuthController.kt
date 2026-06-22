@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.LoginRequest
 import com.mcpratapp.dto.request.RegisterRequest
 import com.mcpratapp.dto.request.UserRequest
 import com.mcpratapp.dto.response.AuthResponse
+import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.UserRepository
 import com.mcpratapp.security.JwtProvider
 import com.mcpratapp.service.UserService
@@ -32,6 +33,10 @@ class AuthController(
     fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<AuthResponse> {
         val foundUser = userRepository.findByEmail(request.email)
             ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+        if (foundUser.status != UserStatus.ACTIVE) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        }
 
         if (!passwordEncoder.matches(request.password, foundUser.password)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
