@@ -41,9 +41,8 @@ class OrderService (
             .orElseThrow { IllegalArgumentException("Cliente não encontrado.") }
 
         val orderToSave = Order (
-            clientId,
-            client,
-            vendor,
+            client = client,
+            vendor = vendor
         )
 
         val createdEmptyOrder = orderRepository.save(orderToSave)
