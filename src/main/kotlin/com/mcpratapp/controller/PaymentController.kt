@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("")
+@RequestMapping("/api/v1/")
 class PaymentController (
     private val paymentService: PaymentService,
     private val orderService: OrderService
