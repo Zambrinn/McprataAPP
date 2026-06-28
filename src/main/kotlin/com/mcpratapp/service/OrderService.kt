@@ -4,12 +4,14 @@ import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
+import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.Client
 import com.mcpratapp.model.Order
 import com.mcpratapp.model.OrderItem
 import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.model.Payment
 import com.mcpratapp.model.PaymentStatus
+import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.ClientRepository
 import com.mcpratapp.repository.OrderRepository
 import com.mcpratapp.repository.PaymentRepository
@@ -40,6 +42,15 @@ class OrderService (
         val client = clientRepository.findById(clientId)
             .orElseThrow { IllegalArgumentException("Cliente não encontrado.") }
 
+        if (!client.isActive) {
+            throw ConflictException("Não é possível registrar venda em um cliente inativo.")
+        }
+
+        if (vendor.status != UserStatus.ACTIVE) {
+            throw ConflictException("Não é possivel registrar venda para um vendedor inativo.")
+        }
+
+
         val orderToSave = Order (
             client = client,
             vendor = vendor
@@ -52,16 +63,24 @@ class OrderService (
     fun addItemToOrder(orderId: UUID, productId: UUID, quantity: Int): OrderResponse {
         val existingOrder = orderRepository.findById(orderId)
             .orElseThrow { IllegalArgumentException("Pedido não encontrado.") }
+
         val existingProduct = productRepository.findById(productId)
             .orElseThrow { IllegalArgumentException("Produto não encontrado.") }
+
         val vendorId = existingOrder.vendor.id
             ?: throw IllegalArgumentException("Vendedor sem ID inválido.")
+
         val disponibleStock = existingProduct.totalQuantity - existingProduct.reservedQuantity
+
         val productVendorValidation = productVendorRepository.findByVendorIdAndProductId(vendorId, productId)
             ?: throw IllegalArgumentException("Este vendedor não vende este produto.")
+
         val unitPrice = productVendorValidation.price
+
         val subtotal = quantity.toBigDecimal() * unitPrice
+
         existingOrder.totalAmount += subtotal
+
         if (disponibleStock < quantity) {
             throw IllegalArgumentException("Sem estoque disponível. Temos no momento: $disponibleStock")
         }
@@ -156,7 +175,7 @@ class OrderService (
     private fun convertOrderItemToDto(item: OrderItem): OrderItemResponse {
         return OrderItemResponse(
             id = item.id,
-            productId = item.product.id,
+            productId = item.product.id ?: throw ConflictException("É necessário informar o id do produto."),
             quantity = item.quantity,
             unitPrice = item.unitPrice,
             subtotal = item.subtotal
@@ -166,8 +185,8 @@ class OrderService (
     private fun Order.toResponse(): OrderResponse {
         return OrderResponse(
             id = this.id!!,
-            clientId = this.client.id,
-            vendorId = this.vendor.id ?: throw IllegalArgumentException("Vendedor sem ID inválido."),
+            clientId = this.client.id ?: throw IllegalStateException("Pedido salvo sem id do cliente."),
+            vendorId = this.vendor.id ?: throw IllegalStateException("Vendedor sem ID, inválido."),
             status = this.status,
             totalAmount = this.totalAmount,
             items = this.items.map { convertOrderItemToDto(it) },
