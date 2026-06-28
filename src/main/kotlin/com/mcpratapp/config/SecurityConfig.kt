@@ -30,10 +30,11 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
             .authorizeHttpRequests { authorize ->
                 logger.info("Security config")
                 authorize
-                    .requestMatchers("/auth/**").permitAll()
-                    .requestMatchers("/users", "/users/**").hasRole("ADMIN")
-                    .requestMatchers("/orders/**").hasAnyRole("ADMIN", "VENDOR")
-                    .requestMatchers("/payments/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
+                    .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro
                     .requestMatchers("/actuator/**").permitAll()  // Permitir health check
                     .anyRequest().authenticated()
