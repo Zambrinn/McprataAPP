@@ -17,24 +17,27 @@ class Client (
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false, length = 150)
-    val name: String,
+    var name: String,
 
     @Column(nullable = false, unique = true, length = 13)
-    val whatsappNumber: String,
+    var whatsappNumber: String,
 
-    @Column(nullable = true, unique = true, length = 150)
-    val email: String? = null,
+    @Column(nullable = false, unique = true, length = 150)
+    var email: String,
 
     @Column(nullable = false, length = 300)
-    val address: String,
+    var address: String,
 
     @Column(nullable = true, length = 150)
-    val companyName: String? = null,
+    var companyName: String? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 
     @Column(name = "updated_at")
-    var updatedAt: LocalDateTime = LocalDateTime.now()
+    var updatedAt: LocalDateTime = LocalDateTime.now(),
+
+    @Column(nullable = false)
+    var isActive: Boolean,
 ) {
 }
