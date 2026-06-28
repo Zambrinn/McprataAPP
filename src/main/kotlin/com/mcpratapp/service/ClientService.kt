@@ -87,9 +87,23 @@ class ClientService (
         return savedClient.toResponse()
     }
 
+    fun reactivateClient(id: UUID): ClientResponse {
+        val existingClient = clientRepository.findByIdOrNull(id)
+            ?: throw ResourceNotFoundException("Cliente não encontrado com id: $id")
+
+        if (existingClient.isActive) {
+            throw ConflictException("O usuário já está ativo")
+        }
+
+        existingClient.isActive = true
+        existingClient.updatedAt = LocalDateTime.now()
+
+        return clientRepository.save(existingClient).toResponse()
+    }
+
     private fun Client.toResponse(): ClientResponse {
         return ClientResponse(
-            id = this.id,
+            id = this.id ?: throw IllegalStateException("Cliente salvo sem id"),
             name = this.name,
             whatsappNumber = this.whatsappNumber,
             email = this.email,

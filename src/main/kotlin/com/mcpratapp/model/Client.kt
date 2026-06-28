@@ -14,7 +14,7 @@ import java.util.UUID
 class Client (
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(nullable = false, length = 150)
     var name: String,
