@@ -8,4 +8,5 @@ import java.util.UUID
 @Repository
 interface ProductRepository : JpaRepository<Product, UUID> {
     fun findBySku(sku: String): Product?
+    fun existsBySkuAndIdNot(sku: String, id: UUID): Boolean
 }
