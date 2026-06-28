@@ -30,12 +30,14 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
             .authorizeHttpRequests { authorize ->
                 logger.info("Security config")
                 authorize
-                    .requestMatchers("/auth/**").permitAll()
-                    .requestMatchers("/users", "/users/**").hasRole("ADMIN")
-                    .requestMatchers("/orders/**").permitAll()
-                    .requestMatchers("/payments/**").permitAll()
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/products", "api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
+                    .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro
-                    .requestMatchers("/actuator/**").permitAll()  // Permitir health check se precisar
+                    .requestMatchers("/actuator/**").permitAll()  // Permitir health check
                     .anyRequest().authenticated()
             }
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
@@ -60,8 +62,7 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
             maxAge = 3600
         }
 
-        logger.info("✅ CORS configurado para: http://localhost:5173")
-        logger.info("✅ Métodos permitidos: GET, POST, PUT, PATCH, DELETE, OPTIONS")
+        logger.info("CORS configurado para: http://localhost:5173")
 
        val source = UrlBasedCorsConfigurationSource()
        source.registerCorsConfiguration("/**", config)

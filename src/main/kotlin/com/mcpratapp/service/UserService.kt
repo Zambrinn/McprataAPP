@@ -5,10 +5,13 @@ import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.exception.ResourceNotFoundException
+import com.mcpratapp.model.Role
 import com.mcpratapp.model.User
 import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -42,9 +45,27 @@ class UserService (
         return userRepository.findByEmail(email)
     }
 
-    fun getAllUsers(): List<UserResponse> {
-        val allUsers: List<User> = userRepository.findAll()
-        return allUsers.map { it.toResponse() }
+    fun getAllUsers(search: String?, role: Role?, status: UserStatus?, pageable: Pageable): Page<UserResponse> {
+        val normalizedSearch = search
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotEmpty() }
+
+        val users = if (normalizedSearch == null) {
+            userRepository.findUsers(
+                role = role,
+                status = status,
+                pageable = pageable
+            )
+        } else {
+            userRepository.searchUsers(
+                search = normalizedSearch,
+                role = role,
+                status = status,
+                pageable = pageable
+            )
+        }
+        return users.map { it.toResponse() }
     }
 
     fun getUserById(userId: UUID): UserResponse {
@@ -101,7 +122,7 @@ class UserService (
 
         val emailOwner = userRepository.findByEmail(existingUser.email)
         if (emailOwner != null && emailOwner.id != existingUser.id && emailOwner.status == UserStatus.ACTIVE) {
-            throw IllegalStateException("Já existe um usuário ativo com esse e-mail.")
+            throw ConflictException("Já existe um usuário ativo com esse e-mail.")
         } 
 
         existingUser.status = UserStatus.ACTIVE

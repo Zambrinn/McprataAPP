@@ -7,4 +7,8 @@ import java.util.UUID
 
 @Repository
 interface ClientRepository : JpaRepository<Client, UUID> {
+    fun findByEmail(email: String): Client?
+    fun findByWhatsappNumber(whatsappNumber: String): Client?
+    fun existsByWhatsappNumberAndIdNot(whatsappNumber: String, id: UUID): Boolean
+    fun existsByEmailAndIdNot(email: String, id: UUID): Boolean
 }

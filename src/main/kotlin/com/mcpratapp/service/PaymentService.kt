@@ -31,7 +31,7 @@ class PaymentService (
     private fun Payment.toResponse(): PaymentResponse {
         return PaymentResponse(
             id = this.id,
-            orderId = this.order.id,
+            orderId = this.order.id ?: throw IllegalStateException("O pagamento precisa ter o id do pedido."),
             method = this.method,
             status = this.status,
             amount = this.amount,

@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 @RestController
 class AuthController(
-    @Value($$"${app.jwt.expiration:86400000}")
+    @Value("\${app.jwt.expiration:86400000}")    
     private val expiration: Long,
     private val userRepository: UserRepository,
     private val jwtProvider: JwtProvider,
@@ -49,6 +49,7 @@ class AuthController(
             user = userResponse,
             expiresIn = expiration
         ))
+        
     }
 
     @PostMapping("/register")

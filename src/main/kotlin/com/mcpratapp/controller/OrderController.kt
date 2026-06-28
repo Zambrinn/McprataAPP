@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping("/api/v1/orders")
 class OrderController (
     private val orderService: OrderService
 ) {
@@ -48,8 +48,8 @@ class OrderController (
     }
 
     @GetMapping
-    fun getOrders(): List<OrderResponse> {
-        return orderService.getOrders()
+    fun getOrders(): ResponseEntity<List<OrderResponse>> {
+        return ResponseEntity.status(HttpStatus.FOUND).body(orderService.getOrders())
     }
 
     @GetMapping("/{orderId}")
