@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
+import lombok.Builder
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
@@ -20,16 +21,16 @@ import java.util.UUID
 class Product (
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @Column(nullable = false, unique = true, length = 50)
-    val sku: String,
+    var sku: String,
 
     @Column(nullable = false, length = 200)
-    val name: String,
+    var name: String,
 
     @Column(nullable = true, length = 500)
-    val description: String? = null,
+    var description: String? = null,
 
     @Column(nullable = false)
     var totalQuantity: Int,
