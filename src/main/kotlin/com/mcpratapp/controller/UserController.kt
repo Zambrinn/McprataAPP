@@ -3,8 +3,13 @@ package com.mcpratapp.controller
 import com.mcpratapp.dto.request.UserRequest
 import com.mcpratapp.dto.request.UserUpdateRequest
 import com.mcpratapp.dto.response.UserResponse
+import com.mcpratapp.model.Role
+import com.mcpratapp.model.UserStatus
 import com.mcpratapp.service.UserService
 import jakarta.validation.Valid
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.web.PageableDefault
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -14,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
@@ -29,16 +35,24 @@ class UserController (
     }
 
     @GetMapping
-    fun getAllUsers(): ResponseEntity<List<UserResponse>> {
-        val allUsers: List<UserResponse> = userService.getAllUsers()
-        return ResponseEntity.ok(allUsers)
+    fun getAllUsers(
+        @RequestParam(required = false) search: String?,
+        @RequestParam(required = false) role: Role?,
+        @RequestParam(required = false) status: UserStatus?,
+        @PageableDefault(size = 10, sort = ["username"]) pageable: Pageable): ResponseEntity<Page<UserResponse>> {
+            return ResponseEntity.ok(
+                userService.getAllUsers(
+                    search = search,
+                    role = role,
+                    status = status,
+                    pageable = pageable
+                )
+            )
     }
 
     @GetMapping("/{id}")
     fun getUserById(@Valid @PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
-        val foundUser = userService.getUserById(userId)
-        return foundUser?.let { user -> ResponseEntity.ok(user) }
-            ?: ResponseEntity.notFound().build()
+        return ResponseEntity.ok(userService.getUserById(userId))
     }
 
     @PutMapping("/{id}")
@@ -58,9 +72,8 @@ class UserController (
     }
 
     @DeleteMapping("/{id}")
-    fun deleteUser(@PathVariable("id") userId: UUID): Unit {
-        val foundUser = userService.getUserById(userId)
-        val deletedUser = userService.deleteUser(userId)
-        return deletedUser
+    fun deleteUser(@PathVariable("id") userId: UUID): ResponseEntity<Void> {
+        userService.deleteUser(userId)
+        return ResponseEntity.noContent().build()
     }
 }
