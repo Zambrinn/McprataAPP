@@ -39,6 +39,9 @@ class Order (
     @Column(nullable = false, precision = 12, scale = 2)
     var totalAmount: BigDecimal = BigDecimal.ZERO,
 
+    @Column(nullable = false, precision = 12, scale = 2)
+    var discountAmount: BigDecimal = BigDecimal.ZERO,
+
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItem> = mutableListOf(),
 
@@ -55,10 +58,10 @@ class Order (
 enum class OrderStatus {
     PENDING,
     CONFIRMED,
-    SENT,
+    SENT, // PREVISTO NO MODELO MAS NÃO USADO POR CONVENÇÃO
     DELIVERED,
     CANCELED,
-    COMPLETED
+    COMPLETED // PREVISTO NO MODELO MAS NÃO USADO POR CONVENÇÃO
 }
 
 @Entity
@@ -66,7 +69,7 @@ enum class OrderStatus {
 class OrderItem (
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID = UUID.randomUUID(),
+    val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

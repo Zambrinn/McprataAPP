@@ -1,20 +1,25 @@
 package com.mcpratapp.controller
 
 import com.mcpratapp.dto.request.ConfirmOrderRequest
+import com.mcpratapp.dto.request.OrderDiscountRequest
 import com.mcpratapp.dto.request.OrderItemRequest
 import com.mcpratapp.dto.request.OrderRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
+import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDateTime
 import java.util.UUID
 
 @RestController
@@ -61,8 +66,16 @@ class OrderController (
     }
 
     @GetMapping
-    fun getOrders(): ResponseEntity<List<OrderResponse>> {
-        return ResponseEntity.ok(orderService.getOrders())
+    fun getOrders(
+        @RequestParam(required = false) status: OrderStatus?,
+        @RequestParam(required = false) clientId: UUID?,
+        @RequestParam(required = false) vendorId: UUID?,
+        @RequestParam(required = false) startDate: LocalDateTime?,
+        @RequestParam(required = false) endDate: LocalDateTime?
+    ): ResponseEntity<List<OrderResponse>> {
+        return ResponseEntity.ok(
+            orderService.getOrders(status, clientId, vendorId, startDate, endDate)
+        )
     }
 
     @GetMapping("/{orderId}")
@@ -70,5 +83,12 @@ class OrderController (
         val foundOrder = orderService.getOrderByID(orderId)
         return foundOrder?.let { order -> ResponseEntity.ok(order) }
             ?: ResponseEntity.notFound().build()
+    }
+
+    @PatchMapping("/{orderId}/discount")
+    fun applyDiscount(@PathVariable orderId: UUID,
+                      @Valid @RequestBody request: OrderDiscountRequest): ResponseEntity<OrderResponse> {
+        val order = orderService.applyDiscount(orderId, request)
+        return ResponseEntity.ok(order)
     }
 }

@@ -11,6 +11,7 @@ data class OrderResponse(
     val vendorId: UUID,
     val status: OrderStatus,
     val totalAmount: BigDecimal,
+    val discountAmount: BigDecimal,
     val items: List<OrderItemResponse>,
     val createdAt: LocalDateTime,
     val confirmedAt: LocalDateTime?,
