@@ -3,11 +3,14 @@ package com.mcpratapp.service
 import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
+import com.mcpratapp.dto.response.PaymentResponse
 import com.mcpratapp.exception.ConflictException
+import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.Order
 import com.mcpratapp.model.OrderItem
 import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.model.Payment
+import com.mcpratapp.model.PaymentMethod
 import com.mcpratapp.model.PaymentStatus
 import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.ClientRepository
@@ -17,7 +20,6 @@ import com.mcpratapp.repository.ProductRepository
 import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
-import org.springframework.cglib.core.Local
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -109,15 +111,56 @@ class OrderService (
     }
 
     fun confirmOrder(request: ConfirmOrderRequest): OrderResponse {
+        registerPayment(request.orderId, request.paymentMethod)
+
         val existingOrder = orderRepository.findById(request.orderId)
-            .orElseThrow { ConflictException("Pedido não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        return existingOrder.toResponse()
+    }
+
+    fun registerPayment(orderId: UUID, paymentMethod: PaymentMethod): PaymentResponse {
+        val existingOrder = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
 
         if (existingOrder.status != OrderStatus.PENDING) {
-            throw ConflictException("O status do pedido ao ser criado tem que ser pendente.")
+            throw ConflictException("Só é possível registrar pagamento para uma venda pendente.")
         }
 
         if (existingOrder.items.isEmpty()) {
-            throw ConflictException("Não é possível confirmar uma venda sem itens.")
+            throw ConflictException("Não é possível registrar pagamento para uma venda sem itens.")
+        }
+
+        if (paymentRepository.findByOrderId(orderId) != null) {
+            throw ConflictException("Esta venda já possui pagamento registrado.")
+        }
+
+        val payment = Payment(
+            order = existingOrder,
+            method = paymentMethod,
+            amount = existingOrder.totalAmount
+        )
+
+        return paymentRepository.save(payment).toResponse()
+    }
+
+    fun confirmPayment(orderId: UUID, paymentId: UUID): OrderResponse {
+        val existingOrder = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        val payment = paymentRepository.findById(paymentId)
+            .orElseThrow { ResourceNotFoundException("Pagamento não encontrado.") }
+
+        if (payment.order.id != existingOrder.id) {
+            throw ConflictException("O pagamento ${payment.id} não pertence ao pedido ${existingOrder.id}.")
+        }
+
+        if (existingOrder.status != OrderStatus.PENDING) {
+            throw ConflictException("Só é possível confirmar pagamento de uma venda pendente.")
+        }
+
+        if (payment.status != PaymentStatus.PENDING) {
+            throw ConflictException("O pagamento já foi processado.")
         }
 
         existingOrder.items.forEach { item ->
@@ -127,61 +170,54 @@ class OrderService (
             }
         }
 
-        val payment = Payment(
-            order = existingOrder,
-            method = request.paymentMethod,
-            status = PaymentStatus.PAID,
-            amount = existingOrder.totalAmount,
-            paidAt = LocalDateTime.now(),
-        )
+        payment.status = PaymentStatus.PAID
+        payment.paidAt = LocalDateTime.now()
+        existingOrder.status = OrderStatus.CONFIRMED
+        existingOrder.confirmedAt = LocalDateTime.now()
 
         paymentRepository.save(payment)
         productRepository.saveAll(existingOrder.items.map { it.product })
+        orderRepository.save(existingOrder)
 
-        existingOrder.status = OrderStatus.DELIVERED
-        existingOrder.confirmedAt = LocalDateTime.now()
-        existingOrder.deliveredAt = LocalDateTime.now()
-
-        val orderToSave = orderRepository.save(existingOrder)
-        return orderToSave.toResponse()
+        return existingOrder.toResponse()
     }
 
-//    fun confirmPayment(orderId: UUID, paymentId: UUID): OrderResponse {
-//        val existingOrder = orderRepository.findById(orderId)
-//            .orElseThrow { IllegalArgumentException("Pedido não encontrado.") }
-//
-//        val payment = paymentRepository.findById(paymentId)
-//            .orElseThrow { IllegalArgumentException("Pagamento não encontrado.")  }
-//
-//        if (payment.order.id != existingOrder.id) {
-//            throw IllegalArgumentException("O pagamento ${payment.order.id} não pertence ao pedido ${existingOrder.id}")
-//        }
-//
-//        if (existingOrder.status != OrderStatus.CONFIRMED) {
-//            throw IllegalArgumentException("O status do pedido deveria estar confirmado.")
-//        }
-//
-//        if (payment.status != PaymentStatus.PENDING) {
-//            throw IllegalArgumentException("O pagamento já foi processado.")
-//        }
-//
-//        existingOrder.items.forEach { item ->
-//            item.product.apply {
-//                totalQuantity -= item.quantity
-//                reservedQuantity -= item.quantity
-//            }
-//        }
-//
-//        payment.status = PaymentStatus.PAID
-//        payment.paidAt = LocalDateTime.now()
-//        existingOrder.status = OrderStatus.COMPLETED
-//
-//        paymentRepository.save(payment)
-//        productRepository.saveAll(existingOrder.items.map { it.product })
-//        orderRepository.save(existingOrder)
-//
-//        return existingOrder.toResponse()
-//    }
+    fun deliverOrder(orderId: UUID): OrderResponse {
+        val existingOrder = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        if (existingOrder.status != OrderStatus.CONFIRMED) {
+            throw ConflictException("Só é possível entregar uma venda com pagamento confirmado.")
+        }
+
+        existingOrder.status = OrderStatus.DELIVERED
+        existingOrder.deliveredAt = LocalDateTime.now()
+
+        return orderRepository.save(existingOrder).toResponse()
+    }
+
+    fun cancelOrder(orderId: UUID): OrderResponse {
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        if (order.status != OrderStatus.PENDING) {
+            throw ConflictException("Só é possível cancelar uma venda pendente.")
+        }
+
+        order.items.forEach { item ->
+            item.product.reservedQuantity -= item.quantity
+        }
+
+        paymentRepository.findByOrderId(orderId)?.let { payment ->
+            payment.status = PaymentStatus.FAILED
+            paymentRepository.save(payment)
+        }
+
+        order.status = OrderStatus.CANCELED
+
+        productRepository.saveAll(order.items.map { it.product })
+        return orderRepository.save(order).toResponse()
+    }
 
     fun getOrders(): List<OrderResponse> {
         val orders: List<Order> = orderRepository.findAll()
@@ -214,6 +250,18 @@ class OrderService (
             createdAt = this.createdAt,
             confirmedAt = this.confirmedAt,
             deliveredAt = this.deliveredAt
+        )
+    }
+
+    private fun Payment.toResponse(): PaymentResponse {
+        return PaymentResponse(
+            id = this.id ?: throw IllegalStateException("Pagamento salvo sem ID."),
+            orderId = this.order.id ?: throw IllegalStateException("O pagamento precisa ter o id do pedido."),
+            method = this.method,
+            status = this.status,
+            amount = this.amount,
+            paidAt = this.paidAt,
+            createdAt = this.createdAt
         )
     }
 }
