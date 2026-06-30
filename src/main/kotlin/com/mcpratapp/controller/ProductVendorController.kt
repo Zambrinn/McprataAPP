@@ -36,7 +36,7 @@ class ProductVendorController(
     }
 
     @GetMapping("/{id}")
-    fun getProductVendorById(@PathVariable("id") id: UUID): ResponseEntity<ProductVendorResponse> {
+    fun getProductVendorById(@PathVariable id: UUID): ResponseEntity<ProductVendorResponse> {
         return ResponseEntity.ok(productVendorService.getProductVendorById(id))
     }
 
@@ -56,19 +56,19 @@ class ProductVendorController(
 
     @PutMapping("/{id}")
     fun updateProductVendor(
-        @PathVariable("id") id: UUID,
+        @PathVariable id: UUID,
         @Valid @RequestBody request: ProductVendorUpdateRequest
     ): ResponseEntity<ProductVendorResponse> {
         return ResponseEntity.ok(productVendorService.updateProductVendor(id, request))
     }
 
     @DeleteMapping("/{id}")
-    fun deactivateProductVendor(@PathVariable("id") id: UUID): ResponseEntity<ProductVendorResponse> {
+    fun deactivateProductVendor(@PathVariable id: UUID): ResponseEntity<ProductVendorResponse> {
         return ResponseEntity.ok(productVendorService.deactivateProductVendor(id))
     }
 
     @PutMapping("/{id}/restore")
-    fun restoreProductVendor(@PathVariable("id") id: UUID): ResponseEntity<ProductVendorResponse> {
+    fun restoreProductVendor(@PathVariable id: UUID): ResponseEntity<ProductVendorResponse> {
         return ResponseEntity.ok(productVendorService.restoreProductVendor(id))
     }
 }

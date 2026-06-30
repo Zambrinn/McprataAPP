@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.request.OrderItemRequest
 import com.mcpratapp.dto.request.OrderRequest
 import com.mcpratapp.dto.response.OrderResponse
+import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -40,16 +41,28 @@ class OrderController (
                      @Valid @RequestBody request: ConfirmOrderRequest
     ): ResponseEntity<OrderResponse> {
         if (orderId != request.orderId) {
-            throw IllegalArgumentException("Order ID da URL não corresponde ao do request body")
+            throw ConflictException("Order ID da URL não corresponde ao do request body")
         }
 
         val order = orderService.confirmOrder(request)
         return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
+    @PostMapping("/{orderId}/deliver")
+    fun deliverOrder(@PathVariable orderId: UUID): ResponseEntity<OrderResponse> {
+        val order = orderService.deliverOrder(orderId)
+        return ResponseEntity.ok(order)
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    fun cancelOrder(@PathVariable orderId: UUID): ResponseEntity<OrderResponse> {
+        val order = orderService.cancelOrder(orderId)
+        return ResponseEntity.ok(order)
+    }
+
     @GetMapping
     fun getOrders(): ResponseEntity<List<OrderResponse>> {
-        return ResponseEntity.status(HttpStatus.FOUND).body(orderService.getOrders())
+        return ResponseEntity.ok(orderService.getOrders())
     }
 
     @GetMapping("/{orderId}")

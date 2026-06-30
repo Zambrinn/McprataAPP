@@ -33,12 +33,12 @@ class ProductController (
     }
 
     @GetMapping("/{id}")
-    fun getProductById(@Valid @PathVariable("id") productId: UUID): ResponseEntity<ProductResponse> {
+    fun getProductById(@Valid @PathVariable productId: UUID): ResponseEntity<ProductResponse> {
         return ResponseEntity.ok(productService.getProductById(productId))
     }
 
     @PutMapping("/{id}")
-    fun updateProduct(@PathVariable("id") productId: UUID,
+    fun updateProduct(@PathVariable productId: UUID,
                       @Valid
                       @RequestBody
                       request: ProductRequest): ResponseEntity<ProductResponse> {
@@ -46,12 +46,12 @@ class ProductController (
     }
 
     @DeleteMapping("/{id}")
-    fun deactivateProduct(@Valid @PathVariable("id") productId: UUID): ResponseEntity<ProductResponse> {
+    fun deactivateProduct(@Valid @PathVariable productId: UUID): ResponseEntity<ProductResponse> {
         return ResponseEntity.ok(productService.deactivateProduct(productId))
     }
 
     @PutMapping("/{id}/restore")
-    fun reactivateProduct(@Valid @PathVariable("id") productId: UUID): ResponseEntity<ProductResponse> {
+    fun reactivateProduct(@Valid @PathVariable productId: UUID): ResponseEntity<ProductResponse> {
         return ResponseEntity.ok(productService.reactivateProduct(productId))
     }
 }

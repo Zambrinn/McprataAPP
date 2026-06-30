@@ -1,13 +1,17 @@
 package com.mcpratapp.controller
 
+import com.mcpratapp.dto.request.PaymentRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
 import com.mcpratapp.service.OrderService
 import com.mcpratapp.service.PaymentService
+import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -30,11 +34,20 @@ class PaymentController (
         return ResponseEntity.ok(payments)
     }
 
-//    @PostMapping("/orders/{orderId}/payments/{paymentId}/confirm")
-//    fun confirmPayment(@PathVariable orderId: UUID,
-//                       @PathVariable paymentId: UUID): ResponseEntity<OrderResponse> {
-//        val order = orderService.confirmPayment(orderId, paymentId)
-//        return ResponseEntity.ok(order)
-//    }
+    @PostMapping("/orders/{orderId}/payments")
+    fun registerPayment(
+        @PathVariable orderId: UUID,
+        @Valid @RequestBody request: PaymentRequest
+    ): ResponseEntity<PaymentResponse> {
+        val payment = orderService.registerPayment(orderId, request.paymentMethod)
+        return ResponseEntity.status(HttpStatus.CREATED).body(payment)
+    }
+
+    @PostMapping("/orders/{orderId}/payments/{paymentId}/confirm")
+    fun confirmPayment(@PathVariable orderId: UUID,
+                       @PathVariable paymentId: UUID): ResponseEntity<OrderResponse> {
+        val order = orderService.confirmPayment(orderId, paymentId)
+        return ResponseEntity.ok(order)
+    }
 
 }

@@ -51,28 +51,28 @@ class UserController (
     }
 
     @GetMapping("/{id}")
-    fun getUserById(@Valid @PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
+    fun getUserById(@Valid @PathVariable userId: UUID): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.getUserById(userId))
     }
 
     @PutMapping("/{id}")
-    fun updateUser(@PathVariable("id") userId: UUID,
+    fun updateUser(@PathVariable userId: UUID,
                    @Valid @RequestBody request: UserUpdateRequest): ResponseEntity<UserResponse>? {
         return ResponseEntity.ok(userService.updateUser(userId, request))
     }
 
     @PutMapping("/{id}/deactivate")
-    fun deactivateUser(@PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
+    fun deactivateUser(@PathVariable userId: UUID): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.deactivateUser(userId))
     }
 
     @PutMapping("/{id}/restore")
-    fun restoreUser(@PathVariable("id") userId: UUID): ResponseEntity<UserResponse> {
+    fun restoreUser(@PathVariable userId: UUID): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.restoreUser(userId))
     }
 
     @DeleteMapping("/{id}")
-    fun deleteUser(@PathVariable("id") userId: UUID): ResponseEntity<Void> {
+    fun deleteUser(@PathVariable userId: UUID): ResponseEntity<Void> {
         userService.deleteUser(userId)
         return ResponseEntity.noContent().build()
     }
