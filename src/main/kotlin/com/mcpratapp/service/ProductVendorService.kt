@@ -128,7 +128,6 @@ class ProductVendorService (
             price = this.price,
             isActive = this.isActive,
             createdAt = this.createdAt,
-            updatedAt = this.updatedAt
         )
     }
 }

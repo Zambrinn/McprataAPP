@@ -11,5 +11,4 @@ data class ProductVendorResponse(
     val price: BigDecimal,
     val isActive: Boolean,
     val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime
 )
