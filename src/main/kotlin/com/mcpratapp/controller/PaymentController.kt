@@ -30,11 +30,11 @@ class PaymentController (
         return ResponseEntity.ok(payments)
     }
 
-    @PostMapping("/orders/{orderId}/payments/{paymentId}/confirm")
-    fun confirmPayment(@PathVariable orderId: UUID,
-                       @PathVariable paymentId: UUID): ResponseEntity<OrderResponse> {
-        val order = orderService.confirmPayment(orderId, paymentId)
-        return ResponseEntity.ok(order)
-    }
+//    @PostMapping("/orders/{orderId}/payments/{paymentId}/confirm")
+//    fun confirmPayment(@PathVariable orderId: UUID,
+//                       @PathVariable paymentId: UUID): ResponseEntity<OrderResponse> {
+//        val order = orderService.confirmPayment(orderId, paymentId)
+//        return ResponseEntity.ok(order)
+//    }
 
 }

@@ -30,7 +30,7 @@ class PaymentService (
 
     private fun Payment.toResponse(): PaymentResponse {
         return PaymentResponse(
-            id = this.id,
+            id = this.id ?: throw IllegalStateException("Pagamento salvo sem ID."),
             orderId = this.order.id ?: throw IllegalStateException("O pagamento precisa ter o id do pedido."),
             method = this.method,
             status = this.status,
