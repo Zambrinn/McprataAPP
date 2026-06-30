@@ -31,7 +31,8 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
                 logger.info("Security config")
                 authorize
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/products", "api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers("/api/v1/products", "/api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers("/api/v1/product-vendors", "/api/v1/product-vendors/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
@@ -69,4 +70,3 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
        return source
     }
 }
-
