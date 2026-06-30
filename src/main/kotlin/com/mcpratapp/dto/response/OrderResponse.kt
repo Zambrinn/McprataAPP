@@ -13,5 +13,6 @@ data class OrderResponse(
     val totalAmount: BigDecimal,
     val items: List<OrderItemResponse>,
     val createdAt: LocalDateTime,
-    val confirmedAt: LocalDateTime?
+    val confirmedAt: LocalDateTime?,
+    val deliveredAt: LocalDateTime?
 )
