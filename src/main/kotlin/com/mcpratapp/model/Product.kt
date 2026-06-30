@@ -7,8 +7,6 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
-import lombok.Builder
-import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 

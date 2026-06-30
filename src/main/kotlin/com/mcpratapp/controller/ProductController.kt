@@ -2,10 +2,7 @@ package com.mcpratapp.controller
 
 import com.mcpratapp.dto.request.ProductRequest
 import com.mcpratapp.dto.response.ProductResponse
-import com.mcpratapp.model.Product
-import com.mcpratapp.repository.ProductRepository
 import com.mcpratapp.service.ProductService
-import feign.Response
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -48,7 +45,7 @@ class ProductController (
         return ResponseEntity.ok(productService.updateProduct(request, productId))
     }
 
-    @DeleteMapping("/{id")
+    @DeleteMapping("/{id}")
     fun deactivateProduct(@Valid @PathVariable("id") productId: UUID): ResponseEntity<ProductResponse> {
         return ResponseEntity.ok(productService.deactivateProduct(productId))
     }
