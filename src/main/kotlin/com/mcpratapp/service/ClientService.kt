@@ -111,7 +111,6 @@ class ClientService (
             companyName = this.companyName,
             isActive = this.isActive,
             createdAt = this.createdAt,
-            updatedAt = this.updatedAt
         )
     }
 }

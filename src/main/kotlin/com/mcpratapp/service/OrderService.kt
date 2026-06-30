@@ -1,6 +1,7 @@
 package com.mcpratapp.service
 
 import com.mcpratapp.dto.request.ConfirmOrderRequest
+import com.mcpratapp.dto.request.OrderDiscountRequest
 import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
@@ -22,8 +23,11 @@ import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.jvm.Throws
+import kotlin.math.max
 
 @Service
 @Transactional
@@ -37,10 +41,10 @@ class OrderService (
 ) {
     fun createEmptyOrder(vendorId: UUID, clientId: UUID): OrderResponse {
         val vendor = userRepository.findById(vendorId)
-            .orElseThrow { IllegalArgumentException("Vendedor não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Vendedor não encontrado.") }
 
         val client = clientRepository.findById(clientId)
-            .orElseThrow { IllegalArgumentException("Cliente não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Cliente não encontrado.") }
 
         if (!client.isActive) {
             throw ConflictException("Não é possível registrar venda em um cliente inativo.")
@@ -60,12 +64,48 @@ class OrderService (
         return createdEmptyOrder.toResponse()
     }
 
+    fun applyDiscount(orderId: UUID, request: OrderDiscountRequest): OrderResponse {
+        val order = orderRepository.findByIdOrNull(orderId)
+            ?: throw ResourceNotFoundException("Não foi possível encontrar um pedido com id: $orderId")
+
+        if (paymentRepository.findByOrderId(orderId) != null) {
+            throw ConflictException("Não é possível alterar uma venda com pagamento registrado.")
+        }
+
+        if (order.status != OrderStatus.PENDING) {
+            throw ConflictException("Não é possível adicionar desconto em um pedido que não está pendente.")
+        }
+
+        if (order.items.isEmpty()) {
+            throw ConflictException("O pedido não tem nenhum item.")
+        }
+
+        val subtotal = order.items.fold(BigDecimal.ZERO) { total, item ->
+            total + item.subtotal
+        }
+
+        val maxDiscount = subtotal * BigDecimal("0.20")
+
+        if (request.discountAmount > maxDiscount) {
+            throw ConflictException("O desconto não pode ser maior que 20% do subtotal da venda")
+        }
+
+        order.discountAmount = request.discountAmount
+        order.totalAmount = subtotal - request.discountAmount
+
+        return orderRepository.save(order).toResponse()
+    }
+
     fun addItemToOrder(orderId: UUID, productId: UUID, quantity: Int): OrderResponse {
         val existingOrder = orderRepository.findById(orderId)
-            .orElseThrow { IllegalArgumentException("Pedido não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
 
         val existingProduct = productRepository.findById(productId)
-            .orElseThrow { IllegalArgumentException("Produto não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Produto não encontrado.") }
+
+        if (paymentRepository.findByOrderId(orderId) != null) {
+            throw ConflictException("Não é possível alterar uma venda com pagamento registrado.")
+        }
 
         if (existingOrder.status != OrderStatus.PENDING) {
             throw ConflictException("Só é possível adicionar itens em uma venda pendente.")
@@ -93,7 +133,6 @@ class OrderService (
 
         val unitPrice = productVendor.price
         val subtotal = quantity.toBigDecimal() * unitPrice
-        existingOrder.totalAmount += subtotal
 
         val orderItem = OrderItem(
             order = existingOrder,
@@ -105,6 +144,7 @@ class OrderService (
         )
         existingOrder.items.add(orderItem)
         existingProduct.reservedQuantity += quantity
+        recalculateTotal(existingOrder)
 
         val updatedOrder = orderRepository.save(existingOrder)
         return updatedOrder.toResponse()
@@ -219,9 +259,20 @@ class OrderService (
         return orderRepository.save(order).toResponse()
     }
 
-    fun getOrders(): List<OrderResponse> {
-        val orders: List<Order> = orderRepository.findAll()
-        return orders.map { it.toResponse() }
+    fun getOrders(
+        status: OrderStatus?,
+        clientId: UUID?,
+        vendorId: UUID?,
+        startDate: LocalDateTime?,
+        endDate: LocalDateTime?
+    ): List<OrderResponse> {
+        return orderRepository.findOrdersWithFilters(
+            status = status,
+            clientId = clientId,
+            vendorId = vendorId,
+            startDate = startDate,
+            endDate = endDate
+        ).map { it.toResponse() }
     }
 
     fun getOrderByID(orderId: UUID): OrderResponse? {
@@ -229,9 +280,19 @@ class OrderService (
         return foundOrder?.toResponse()
     }
 
+    private fun calculateSubtotal(order: Order): BigDecimal {
+        return order.items.fold(BigDecimal.ZERO) { total, item ->
+            total + item.subtotal
+        }
+    }
+
+    private fun recalculateTotal(order: Order) {
+        order.totalAmount = calculateSubtotal(order) - order.discountAmount
+    }
+
     private fun convertOrderItemToDto(item: OrderItem): OrderItemResponse {
         return OrderItemResponse(
-            id = item.id,
+            id = item.id ?: throw IllegalStateException("Item do pedido salvo sem ID."),
             productId = item.product.id ?: throw ConflictException("É necessário informar o id do produto."),
             quantity = item.quantity,
             unitPrice = item.unitPrice,
@@ -246,6 +307,7 @@ class OrderService (
             vendorId = this.vendor.id ?: throw IllegalStateException("Vendedor sem ID, inválido."),
             status = this.status,
             totalAmount = this.totalAmount,
+            discountAmount = this.discountAmount,
             items = this.items.map { convertOrderItemToDto(it) },
             createdAt = this.createdAt,
             confirmedAt = this.confirmedAt,

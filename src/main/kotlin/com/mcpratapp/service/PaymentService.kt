@@ -1,6 +1,7 @@
 package com.mcpratapp.service
 
 import com.mcpratapp.dto.response.PaymentResponse
+import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.Payment
 import com.mcpratapp.repository.OrderRepository
 import com.mcpratapp.repository.PaymentRepository
@@ -16,13 +17,13 @@ class PaymentService (
 ) {
     fun getPaymentById(paymentId: UUID): PaymentResponse {
         val payment = paymentRepository.findById(paymentId)
-            .orElseThrow { IllegalArgumentException("O pagamento com id ${paymentId} não existe.") }
+            .orElseThrow { ResourceNotFoundException("O pagamento com id ${paymentId} não existe.") }
         return payment.toResponse()
     }
 
     fun getPaymentByOrderId(orderId: UUID): List<PaymentResponse> {
         orderRepository.findById(orderId)
-            .orElseThrow { IllegalArgumentException("Pedido não encontrado.") }
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
 
         val payment = paymentRepository.findByOrderId(orderId)
         return payment?.let { listOf(it.toResponse()) } ?: emptyList()
