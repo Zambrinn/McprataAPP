@@ -1,6 +1,7 @@
 package com.mcpratapp.service
 
 import com.mcpratapp.dto.request.ProductVendorRequest
+import com.mcpratapp.dto.request.ProductVendorUpdateRequest
 import com.mcpratapp.dto.response.ProductVendorResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.exception.ResourceNotFoundException
@@ -13,6 +14,7 @@ import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Service
@@ -20,20 +22,18 @@ import java.util.UUID
 class ProductVendorService (
     private val productVendorRepository: ProductVendorRepository,
     private val productRepository: ProductRepository,
-    private val userRepository: UserRepository,
-)   {
-    fun createProductVendor(request: ProductVendorRequest): ProductVendorResponse
-    {
+    private val userRepository: UserRepository
+) {
+    fun createProductVendor(request: ProductVendorRequest): ProductVendorResponse {
         val product = productRepository.findByIdOrNull(request.productId)
-            ?: throw ResourceNotFoundException(
-                "Produto não encontrado com id: ${request.productId}")
+            ?: throw ResourceNotFoundException("Produto não encontrado com id: ${request.productId}")
 
         if (!product.isActive) {
             throw ConflictException("Não é possível vincular um produto inativo.")
         }
 
         val vendor = userRepository.findByIdOrNull(request.vendorId)
-            ?: throw ResourceNotFoundException("Vendedor não encontrado com id:${request.vendorId}")
+            ?: throw ResourceNotFoundException("Vendedor não encontrado com id: ${request.vendorId}")
 
         if (vendor.status != UserStatus.ACTIVE) {
             throw ConflictException("Não é possível vincular produto a um vendedor inativo.")
@@ -43,8 +43,7 @@ class ProductVendorService (
             throw ConflictException("Só é possível vincular produtos a usuários vendedores.")
         }
 
-        if (productVendorRepository.existsByVendorIdAndProductId(request.vendorId,
-                request.productId)) {
+        if (productVendorRepository.existsByVendorIdAndProductId(request.vendorId, request.productId)) {
             throw ConflictException("Este vendedor já possui vínculo com este produto.")
         }
 
@@ -63,13 +62,62 @@ class ProductVendorService (
     }
 
     fun getProductsByVendorId(vendorId: UUID): List<ProductVendorResponse> {
-        val vendor = userRepository.findByIdOrNull(vendorId)
-            ?: throw ResourceNotFoundException("Não foi encontrado nenhum vendedor com id: $vendorId")
+        userRepository.findByIdOrNull(vendorId)
+            ?: throw ResourceNotFoundException("Vendedor não encontrado com id: $vendorId")
 
-        val productVendors = productVendorRepository.findByVendorId(vendor.id
-            ?: throw ResourceNotFoundException("Erro. Vendedor sem ID."))
+        return productVendorRepository.findByVendorId(vendorId).map { it.toResponse() }
+    }
 
-        return productVendors.map { it.toResponse() }
+    fun getProductsByProductId(productId: UUID): List<ProductVendorResponse> {
+        productRepository.findByIdOrNull(productId)
+            ?: throw ResourceNotFoundException("Produto não encontrado com id: $productId")
+
+        return productVendorRepository.findByProductId(productId).map { it.toResponse() }
+    }
+
+    fun getProductVendorById(id: UUID): ProductVendorResponse {
+        val productVendor = productVendorRepository.findByIdOrNull(id)
+            ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        return productVendor.toResponse()
+    }
+
+    fun updateProductVendor(id: UUID, request: ProductVendorUpdateRequest): ProductVendorResponse {
+        val productVendor = productVendorRepository.findByIdOrNull(id)
+            ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        productVendor.price = request.price
+        productVendor.updatedAt = LocalDateTime.now()
+
+        return productVendorRepository.save(productVendor).toResponse()
+    }
+
+    fun deactivateProductVendor(id: UUID): ProductVendorResponse {
+        val productVendor = productVendorRepository.findByIdOrNull(id)
+            ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        if (!productVendor.isActive) {
+            throw ConflictException("Vínculo produto-vendedor já está inativo.")
+        }
+
+        productVendor.isActive = false
+        productVendor.updatedAt = LocalDateTime.now()
+
+        return productVendorRepository.save(productVendor).toResponse()
+    }
+
+    fun restoreProductVendor(id: UUID): ProductVendorResponse {
+        val productVendor = productVendorRepository.findByIdOrNull(id)
+            ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        if (productVendor.isActive) {
+            throw ConflictException("Vínculo produto-vendedor já está ativo.")
+        }
+
+        productVendor.isActive = true
+        productVendor.updatedAt = LocalDateTime.now()
+
+        return productVendorRepository.save(productVendor).toResponse()
     }
 
     private fun ProductVendor.toResponse(): ProductVendorResponse {

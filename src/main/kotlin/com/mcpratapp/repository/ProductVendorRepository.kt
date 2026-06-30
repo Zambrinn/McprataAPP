@@ -9,7 +9,7 @@ import java.util.UUID
 interface ProductVendorRepository : JpaRepository<ProductVendor, UUID> {
     fun findByVendorIdAndProductId(vendorId: UUID, productId: UUID): ProductVendor?
     fun findByVendorId(vendorId: UUID): List<ProductVendor>
+    fun findByProductId(productId: UUID): List<ProductVendor>
     fun existsByVendorIdAndProductId(vendorId: UUID, productId: UUID): Boolean
-    fun existsByVendorIdAndProductIdAndIdNot(vendorId: UUID, productId: UUID, id:
-    UUID): Boolean
+    fun existsByVendorIdAndProductIdAndIdNot(vendorId: UUID, productId: UUID, id: UUID): Boolean
 }
