@@ -20,14 +20,13 @@ import com.mcpratapp.repository.PaymentRepository
 import com.mcpratapp.repository.ProductRepository
 import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
+import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
-import kotlin.jvm.Throws
-import kotlin.math.max
 
 @Service
 @Transactional
@@ -37,7 +36,8 @@ class OrderService (
     private val clientRepository: ClientRepository,
     private val productVendorRepository: ProductVendorRepository,
     private val paymentRepository: PaymentRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val entityManager: EntityManager
 ) {
     fun createEmptyOrder(vendorId: UUID, clientId: UUID): OrderResponse {
         val vendor = userRepository.findById(vendorId)
@@ -266,13 +266,37 @@ class OrderService (
         startDate: LocalDateTime?,
         endDate: LocalDateTime?
     ): List<OrderResponse> {
-        return orderRepository.findOrdersWithFilters(
-            status = status,
-            clientId = clientId,
-            vendorId = vendorId,
-            startDate = startDate,
-            endDate = endDate
-        ).map { it.toResponse() }
+        val criteriaBuilder = entityManager.criteriaBuilder
+        val query = criteriaBuilder.createQuery(Order::class.java)
+        val root = query.from(Order::class.java)
+        val predicates = mutableListOf<jakarta.persistence.criteria.Predicate>()
+
+        status?.let {
+            predicates.add(criteriaBuilder.equal(root.get<OrderStatus>("status"), it))
+        }
+
+        clientId?.let {
+            predicates.add(criteriaBuilder.equal(root.get<Any>("client").get<UUID>("id"), it))
+        }
+
+        vendorId?.let {
+            predicates.add(criteriaBuilder.equal(root.get<Any>("vendor").get<UUID>("id"), it))
+        }
+
+        startDate?.let {
+            predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), it))
+        }
+
+        endDate?.let {
+            predicates.add(criteriaBuilder.lessThan(root.get("createdAt"), it))
+        }
+
+        query
+            .select(root)
+            .where(*predicates.toTypedArray())
+            .orderBy(criteriaBuilder.desc(root.get<LocalDateTime>("createdAt")))
+
+        return entityManager.createQuery(query).resultList.map { it.toResponse() }
     }
 
     fun getOrderByID(orderId: UUID): OrderResponse? {
