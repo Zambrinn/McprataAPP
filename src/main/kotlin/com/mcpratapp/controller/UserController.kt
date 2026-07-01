@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @RestController
@@ -51,29 +50,29 @@ class UserController (
     }
 
     @GetMapping("/{id}")
-    fun getUserById(@Valid @PathVariable userId: UUID): ResponseEntity<UserResponse> {
-        return ResponseEntity.ok(userService.getUserById(userId))
+    fun getUserById(@Valid @PathVariable id: UUID): ResponseEntity<UserResponse> {
+        return ResponseEntity.ok(userService.getUserById(id))
     }
 
     @PutMapping("/{id}")
-    fun updateUser(@PathVariable userId: UUID,
+    fun updateUser(@PathVariable id: UUID,
                    @Valid @RequestBody request: UserUpdateRequest): ResponseEntity<UserResponse>? {
-        return ResponseEntity.ok(userService.updateUser(userId, request))
+        return ResponseEntity.ok(userService.updateUser(id, request))
     }
 
     @PutMapping("/{id}/deactivate")
-    fun deactivateUser(@PathVariable userId: UUID): ResponseEntity<UserResponse> {
-        return ResponseEntity.ok(userService.deactivateUser(userId))
+    fun deactivateUser(@PathVariable id: UUID): ResponseEntity<UserResponse> {
+        return ResponseEntity.ok(userService.deactivateUser(id))
     }
 
     @PutMapping("/{id}/restore")
-    fun restoreUser(@PathVariable userId: UUID): ResponseEntity<UserResponse> {
-        return ResponseEntity.ok(userService.restoreUser(userId))
+    fun restoreUser(@PathVariable id: UUID): ResponseEntity<UserResponse> {
+        return ResponseEntity.ok(userService.restoreUser(id))
     }
 
     @DeleteMapping("/{id}")
-    fun deleteUser(@PathVariable userId: UUID): ResponseEntity<Void> {
-        userService.deleteUser(userId)
+    fun deleteUser(@PathVariable id: UUID): ResponseEntity<Void> {
+        userService.deleteUser(id)
         return ResponseEntity.noContent().build()
     }
 }
