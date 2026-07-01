@@ -33,27 +33,27 @@ class ClientController (
     }
 
     @GetMapping("/{id}")
-    fun getClientById(@PathVariable clientId: UUID): ResponseEntity<ClientResponse> {
-        return ResponseEntity.ok(clientService.getClientById(clientId))
+    fun getClientById(@PathVariable id: UUID): ResponseEntity<ClientResponse> {
+        return ResponseEntity.ok(clientService.getClientById(id))
     }
 
     @PutMapping("/{id}")
     fun updateClient(
                      @PathVariable
-                     clientId: UUID,
+                     id: UUID,
                      @Valid
                      @RequestBody request: ClientRequest): ResponseEntity<ClientResponse> {
-        val updatedClient = clientService.updateClient(clientId, request)
+        val updatedClient = clientService.updateClient(id, request)
         return ResponseEntity.status(HttpStatus.OK).body(updatedClient)
     }
 
     @DeleteMapping("/{id}")
-    fun deactivateClient(@Valid @PathVariable clientId: UUID): ResponseEntity<ClientResponse> {
-        return ResponseEntity.status(HttpStatus.OK).body(clientService.deactivateClient(clientId))
+    fun deactivateClient(@Valid @PathVariable id: UUID): ResponseEntity<ClientResponse> {
+        return ResponseEntity.status(HttpStatus.OK).body(clientService.deactivateClient(id))
     }
 
     @PutMapping("/{id}/restore")
-    fun reactivateClient(@Valid @PathVariable clientId: UUID): ResponseEntity<ClientResponse> {
-        return ResponseEntity.status(HttpStatus.OK).body(clientService.reactivateClient(clientId))
+    fun reactivateClient(@Valid @PathVariable id: UUID): ResponseEntity<ClientResponse> {
+        return ResponseEntity.status(HttpStatus.OK).body(clientService.reactivateClient(id))
     }
 }
