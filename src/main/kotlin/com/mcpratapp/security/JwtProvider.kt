@@ -1,31 +1,61 @@
 package com.mcpratapp.security
 
+import com.mcpratapp.model.Role
+import com.mcpratapp.model.User
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.Date
+import java.util.UUID
 
 @Component
 class JwtProvider(
-    @Value("\${app.jwt.secret:your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm-security}")
+    @Value("\${app.jwt.secret:}")
     private val secret: String,
-    @Value("\${app.jwt.expiration:86400000}")
+    @Value("\${app.jwt.expiration:90000}")
     private val expiration: Long
 ) {
-    private val key = Keys.hmacShaKeyFor(secret.toByteArray())
+    private val key by lazy { Keys.hmacShaKeyFor(secret.toByteArray()) }
 
-    fun generateToken(email: String, userId: String): String {
+    @PostConstruct
+    fun validateSecret() {
+        require(secret.isNotBlank() && secret.length >= 32) {
+            "ERRO CRÍTICO DE SEGURANÇA: A propriedade 'app.jwt.secret' deve ser configurada e conter pelo menos 32 caracteres (256 bits)."
+        }
+    }
+    fun generateToken(user: User): String {
         val now = Date()
         val expiryDate = Date(now.time + expiration)
 
         return Jwts.builder()
-            .subject(email)
-            .claim("userId", userId)
+            .subject(user.id.toString())
+            .claim("email", user.email)
+            .claim("role", user.role)
             .issuedAt(now)
             .expiration(expiryDate)
             .signWith(key)
             .compact()
+    }
+
+    fun getAuthenticatedUserFromToken(token: String): AuthenticatedUser? {
+        return try {
+            val claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .payload
+
+            val userId = UUID.fromString(claims.subject)
+            val email = claims.get("email", String::class.java)
+            val roleStr = claims.get("role", String::class.java)
+            val role = Role.valueOf(roleStr)
+
+            AuthenticatedUser(userId, email, role)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun getEmailFromToken(token: String): String? {
