@@ -2,6 +2,7 @@ package com.mcpratapp.config
 
 import com.mcpratapp.security.JwtFilter
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -17,7 +18,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(private val jwtFilter: JwtFilter) {
+class SecurityConfig(
+         private val jwtFilter: JwtFilter,
+         @Value("\${app.cors.allowed-origins}")
+         private val allowedOrigins: String
+) {
 
     private val logger = LoggerFactory.getLogger(SecurityConfig::class.java)
 
@@ -55,7 +60,7 @@ class SecurityConfig(private val jwtFilter: JwtFilter) {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration().apply {
-            allowedOrigins = listOf("http://localhost:5173")
+            allowedOrigins = this@SecurityConfig.allowedOrigins.split(",")
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
             exposedHeaders = listOf("Authorization")
