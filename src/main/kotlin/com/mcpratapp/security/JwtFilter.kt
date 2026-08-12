@@ -48,18 +48,16 @@ class JwtFilter(
         val token = authHeader?.removePrefix("Bearer ")
 
         if (token != null && jwtProvider.isTokenValid(token)) {
-            jwtProvider.getEmailFromToken(token)?.let { email ->
-                val user = userRepository.findByEmail(email)
+            val authenticatedUser = jwtProvider.getAuthenticatedUserFromToken(token)
 
-                if (user != null && user.status == UserStatus.ACTIVE) {
-                    val authority = SimpleGrantedAuthority("ROLE_${user.role.name}")
-                    val auth = UsernamePasswordAuthenticationToken(
-                        user.email,
-                        null,
-                        listOf(authority)
-                    )
-                SecurityContextHolder.getContext().authentication = auth
-                }
+            if (authenticatedUser != null) {
+                val authority = SimpleGrantedAuthority("ROLE_${authenticatedUser.role.name}")
+
+                val auth = UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    listOf(authority)
+                )
             }
         } else {
             logger.warn("JwtFilter Token inválido ou ausente")

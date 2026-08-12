@@ -6,6 +6,7 @@ import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
 import com.mcpratapp.exception.ConflictException
+import com.mcpratapp.exception.ForbidenException
 import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.Order
 import com.mcpratapp.model.OrderItem
@@ -13,6 +14,7 @@ import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.model.Payment
 import com.mcpratapp.model.PaymentMethod
 import com.mcpratapp.model.PaymentStatus
+import com.mcpratapp.model.Role
 import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.ClientRepository
 import com.mcpratapp.repository.OrderRepository
@@ -20,8 +22,10 @@ import com.mcpratapp.repository.PaymentRepository
 import com.mcpratapp.repository.ProductRepository
 import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
+import com.mcpratapp.security.AuthenticatedUser
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
+import org.aspectj.weaver.ast.Or
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -322,6 +326,13 @@ class OrderService (
             unitPrice = item.unitPrice,
             subtotal = item.subtotal
         )
+    }
+
+    private fun assertVendorOwnership(order: Order, requester: AuthenticatedUser) {
+        if (requester.role == Role.ADMIN) return
+        if (order.vendor.id != requester.id) {
+            throw ForbidenException("Você não tem permissão para acessar esse pedido")
+        }
     }
 
     private fun Order.toResponse(): OrderResponse {

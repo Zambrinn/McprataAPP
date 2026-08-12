@@ -1,12 +1,15 @@
 package com.mcpratapp.controller
 
 import com.mcpratapp.dto.request.LoginRequest
+import com.mcpratapp.dto.request.RefreshTokenRequest
 import com.mcpratapp.dto.request.RegisterRequest
 import com.mcpratapp.dto.request.UserRequest
 import com.mcpratapp.dto.response.AuthResponse
+import com.mcpratapp.exception.ForbidenException
 import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.UserRepository
 import com.mcpratapp.security.JwtProvider
+import com.mcpratapp.service.RefreshTokenService
 import com.mcpratapp.service.UserService
 import jakarta.validation.Valid
 import org.springframework.beans.factory.annotation.Value
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.Instant
 
 
 @RequestMapping("/api/v1/auth")
@@ -27,7 +31,8 @@ class AuthController(
     private val userRepository: UserRepository,
     private val jwtProvider: JwtProvider,
     private val passwordEncoder: PasswordEncoder,
-    private val userService: UserService
+    private val userService: UserService,
+    private val refreshTokenService: RefreshTokenService
 ) {
     @PostMapping("/login")
     fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<AuthResponse> {
@@ -42,14 +47,38 @@ class AuthController(
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
-        val token = jwtProvider.generateToken(foundUser.email, foundUser.id.toString())
         val userResponse = userService.getUserById(foundUser.id!!)
+        val token = jwtProvider.generateToken(foundUser)
+        val refreshToken = refreshTokenService.createRefreshToken(foundUser)
         return ResponseEntity.ok(AuthResponse(
             token = token,
             user = userResponse,
-            expiresIn = expiration
+            expiresIn = expiration,
+            refreshToken = refreshToken.token
         ))
         
+    }
+
+    @PostMapping("/refresh")
+    fun refreshToken(@Valid @RequestBody request: RefreshTokenRequest): ResponseEntity<AuthResponse> {
+        val refreshToken = refreshTokenService.findByToken(request.refreshToken)
+            ?: throw ForbidenException("Refresh token inválido")
+
+        refreshTokenService.verifyExpiration(refreshToken)
+        val user = refreshToken.user
+        if (user.status != UserStatus.ACTIVE) {
+            throw ForbidenException("Usuário inativo ou deletdado")
+        }
+
+        val newAccessToken = jwtProvider.generateToken(user)
+        return ResponseEntity.ok(
+            AuthResponse(
+                token = newAccessToken,
+                user = userService.getUserById(user.id!!),
+                expiresIn = 90000,
+                refreshToken = refreshToken.token
+            )
+        )
     }
 
     @PostMapping("/register")
@@ -66,13 +95,16 @@ class AuthController(
         )
 
         val userResponse = userService.createUser(userRequest)
+        val savedUser = userRepository.findByEmail(request.email)!!
+        val token = jwtProvider.generateToken(savedUser)
+        val refreshToken = refreshTokenService.createRefreshToken(savedUser)
 
-        val token = jwtProvider.generateToken(userResponse.email, userResponse.id.toString())
         return ResponseEntity.status(HttpStatus.CREATED).body(
             AuthResponse(
                 token = token,
                 user = userResponse,
-                expiresIn = expiration
+                expiresIn = expiration,
+                refreshToken = refreshToken.token
             )
         )
     }

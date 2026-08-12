@@ -7,6 +7,7 @@ import com.mcpratapp.dto.request.OrderRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.OrderStatus
+import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.OrderService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -29,7 +30,8 @@ class OrderController (
 ) {
     @PostMapping
     fun createOrder(@Valid @RequestBody request: OrderRequest): ResponseEntity<OrderResponse> {
-        val order = orderService.createEmptyOrder(request.vendorId, request.clientId)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.createEmptyOrder(vendorId = currentUser.id, clientId = request.clientId)
         return ResponseEntity.status(HttpStatus.CREATED).body(order)
     }
 

@@ -53,6 +53,17 @@ class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(body)
     }
+    @ExceptionHandler(ForbidenException::class)
+    fun handleForbidden(
+        exception: ForbidenException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        return buildResponse(
+            status = HttpStatus.FORBIDDEN,
+            message = exception.message ?: "Acesso negado.",
+            path = request.requestURI
+        )
+    }
 
     private fun buildResponse(
         status: HttpStatus,
