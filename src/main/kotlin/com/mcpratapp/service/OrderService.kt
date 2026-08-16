@@ -141,6 +141,7 @@ class OrderService (
         }
 
         val unitPrice = productVendor.price
+
         val subtotal = quantity.toBigDecimal() * unitPrice
 
         val orderItem = OrderItem(
