@@ -50,7 +50,7 @@ class OrderController (
                      @Valid @RequestBody request: ConfirmOrderRequest
     ): ResponseEntity<OrderResponse> {
         val currentUser = SecurityUtils.getCurrentUser()
-        val order = orderService.confirmOrder(request, currentUser)
+        val order = orderService.confirmOrder(orderId, request.paymentMethod, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
