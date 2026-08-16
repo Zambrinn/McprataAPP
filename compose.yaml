@@ -24,6 +24,6 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mcprata
       - SPRING_DATASOURCE_USERNAME=zambrin
       - SPRING_DATASOURCE_PASSWORD=zambrin
-      - APP_JWT_SECRET=sua-chave-secreta-de-producao-com-mais-de-32-caracteres
+      - APP_JWT_SECRET=${APP_JWT_SECRET}
 volumes:
   pgdata:
