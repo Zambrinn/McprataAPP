@@ -7,6 +7,7 @@ import com.mcpratapp.dto.request.OrderRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.OrderStatus
+import com.mcpratapp.security.AuthenticatedUser
 import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.OrderService
 import jakarta.validation.Valid
@@ -39,7 +40,8 @@ class OrderController (
     fun addItemToOrder(@PathVariable orderId: UUID,
                        @Valid @RequestBody request: OrderItemRequest
     ): ResponseEntity<OrderResponse> {
-        val order = orderService.addItemToOrder(orderId, request.productId, request.quantity)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.addItemToOrder(orderId, request.productId, request.quantity, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
@@ -47,24 +49,23 @@ class OrderController (
     fun confirmOrder(@PathVariable orderId: UUID,
                      @Valid @RequestBody request: ConfirmOrderRequest
     ): ResponseEntity<OrderResponse> {
-        if (orderId != request.orderId) {
-            throw ConflictException("Order ID da URL não corresponde ao do request body")
-        }
-
-        val order = orderService.confirmOrder(request)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.confirmOrder(request, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
     @PostMapping("/{orderId}/deliver")
     fun deliverOrder(@PathVariable orderId: UUID): ResponseEntity<OrderResponse> {
-        val order = orderService.deliverOrder(orderId)
-        return ResponseEntity.ok(order)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.deliverOrder(orderId, currentUser)
+        return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
     @PostMapping("/{orderId}/cancel")
     fun cancelOrder(@PathVariable orderId: UUID): ResponseEntity<OrderResponse> {
-        val order = orderService.cancelOrder(orderId)
-        return ResponseEntity.ok(order)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.cancelOrder(orderId, currentUser)
+        return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 
     @GetMapping
@@ -75,8 +76,9 @@ class OrderController (
         @RequestParam(required = false) startDate: LocalDateTime?,
         @RequestParam(required = false) endDate: LocalDateTime?
     ): ResponseEntity<List<OrderResponse>> {
+        val currentUser = SecurityUtils.getCurrentUser()
         return ResponseEntity.ok(
-            orderService.getOrders(status, clientId, vendorId, startDate, endDate)
+            orderService.getOrders(status, clientId, vendorId, startDate, endDate, currentUser)
         )
     }
 
@@ -90,7 +92,8 @@ class OrderController (
     @PatchMapping("/{orderId}/discount")
     fun applyDiscount(@PathVariable orderId: UUID,
                       @Valid @RequestBody request: OrderDiscountRequest): ResponseEntity<OrderResponse> {
-        val order = orderService.applyDiscount(orderId, request)
-        return ResponseEntity.ok(order)
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.applyDiscount(orderId, request, currentUser)
+        return ResponseEntity.status(HttpStatus.OK).body(order)
     }
 }

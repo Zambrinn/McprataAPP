@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.system.exitProcess
 
 @Service
 @Transactional
@@ -68,9 +69,11 @@ class OrderService (
         return createdEmptyOrder.toResponse()
     }
 
-    fun applyDiscount(orderId: UUID, request: OrderDiscountRequest): OrderResponse {
+    fun applyDiscount(orderId: UUID, request: OrderDiscountRequest, requester: AuthenticatedUser): OrderResponse {
         val order = orderRepository.findByIdOrNull(orderId)
             ?: throw ResourceNotFoundException("Não foi possível encontrar um pedido com id: $orderId")
+
+        assertVendorOwnership(order, requester)
 
         if (paymentRepository.findByOrderId(orderId) != null) {
             throw ConflictException("Não é possível alterar uma venda com pagamento registrado.")
@@ -100,9 +103,11 @@ class OrderService (
         return orderRepository.save(order).toResponse()
     }
 
-    fun addItemToOrder(orderId: UUID, productId: UUID, quantity: Int): OrderResponse {
+    fun addItemToOrder(orderId: UUID, productId: UUID, quantity: Int, requester: AuthenticatedUser): OrderResponse {
         val existingOrder = orderRepository.findById(orderId)
             .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(existingOrder, requester)
 
         val existingProduct = productRepository.findById(productId)
             .orElseThrow { ResourceNotFoundException("Produto não encontrado.") }
@@ -154,11 +159,12 @@ class OrderService (
         return updatedOrder.toResponse()
     }
 
-    fun confirmOrder(request: ConfirmOrderRequest): OrderResponse {
-        registerPayment(request.orderId, request.paymentMethod)
-
-        val existingOrder = orderRepository.findById(request.orderId)
+    fun confirmOrder(orderId: UUID, paymentMethod: PaymentMethod, requester: AuthenticatedUser): OrderResponse {
+        val existingOrder = orderRepository.findById(orderId)
             .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(existingOrder, requester)
+        registerPayment(orderId, paymentMethod)
 
         return existingOrder.toResponse()
     }
@@ -226,9 +232,11 @@ class OrderService (
         return existingOrder.toResponse()
     }
 
-    fun deliverOrder(orderId: UUID): OrderResponse {
+    fun deliverOrder(orderId: UUID, requester: AuthenticatedUser): OrderResponse {
         val existingOrder = orderRepository.findById(orderId)
             .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(existingOrder, requester)
 
         if (existingOrder.status != OrderStatus.CONFIRMED) {
             throw ConflictException("Só é possível entregar uma venda com pagamento confirmado.")
@@ -240,9 +248,11 @@ class OrderService (
         return orderRepository.save(existingOrder).toResponse()
     }
 
-    fun cancelOrder(orderId: UUID): OrderResponse {
+    fun cancelOrder(orderId: UUID, requester: AuthenticatedUser): OrderResponse {
         val order = orderRepository.findById(orderId)
             .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(order, requester)
 
         if (order.status != OrderStatus.PENDING) {
             throw ConflictException("Só é possível cancelar uma venda pendente.")
@@ -268,12 +278,14 @@ class OrderService (
         clientId: UUID?,
         vendorId: UUID?,
         startDate: LocalDateTime?,
-        endDate: LocalDateTime?
+        endDate: LocalDateTime?,
+        requester: AuthenticatedUser
     ): List<OrderResponse> {
         val criteriaBuilder = entityManager.criteriaBuilder
         val query = criteriaBuilder.createQuery(Order::class.java)
         val root = query.from(Order::class.java)
         val predicates = mutableListOf<jakarta.persistence.criteria.Predicate>()
+        val effectiveVendorId = if (requester.role == Role.VENDOR) requester.id else vendorId
 
         status?.let {
             predicates.add(criteriaBuilder.equal(root.get<OrderStatus>("status"), it))
@@ -283,7 +295,7 @@ class OrderService (
             predicates.add(criteriaBuilder.equal(root.get<Any>("client").get<UUID>("id"), it))
         }
 
-        vendorId?.let {
+        effectiveVendorId?.let {
             predicates.add(criteriaBuilder.equal(root.get<Any>("vendor").get<UUID>("id"), it))
         }
 
