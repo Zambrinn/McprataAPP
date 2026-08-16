@@ -36,7 +36,7 @@ class JwtFilter(
             return
         }
 
-        if (uri.startsWith("/auth/")) {
+        if (uri.startsWith("api/v1/auth/")) {
             logger.info("JwtFilter - Auth endpoint, sem validação JWT")
             filterChain.doFilter(request, response)
             return
@@ -58,6 +58,7 @@ class JwtFilter(
                     null,
                     listOf(authority)
                 )
+                SecurityContextHolder.getContext().authentication = auth
             }
         } else {
             logger.warn("JwtFilter Token inválido ou ausente")
