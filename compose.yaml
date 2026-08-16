@@ -1,9 +1,29 @@
 services:
   postgres:
-    image: 'postgres:latest'
+    image: 'postgres:15-alpine'
+    container_name: mcprata_db
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      - 'POSTGRES_DB=mcprata'
+      - 'POSTGRES_USER=zambrin'
+      - 'POSTGRES_PASSWORD=zambrin'
     ports:
-      - '5432'
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcprata_app
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mcprata
+      - SPRING_DATASOURCE_USERNAME=zambrin
+      - SPRING_DATASOURCE_PASSWORD=zambrin
+      - APP_JWT_SECRET=sua-chave-secreta-de-producao-com-mais-de-32-caracteres
+volumes:
+  pgdata:
