@@ -43,6 +43,7 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMIN, VENDOR")
+                    .requestMatchers("/api/v1/reports", "/api/v1/reports/**").hasAnyRole("ADMIN, VENDOR")
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro
                     .requestMatchers("/actuator/health").permitAll()  // Permitir health check
                     .requestMatchers("/actuator/**").hasRole("ADMIN")
