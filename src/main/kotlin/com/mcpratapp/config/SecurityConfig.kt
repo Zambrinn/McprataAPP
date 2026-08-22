@@ -1,10 +1,13 @@
 package com.mcpratapp.config
 
 import com.mcpratapp.security.JwtFilter
+import com.mcpratapp.security.RateLimitingFilter
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -18,10 +21,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 class SecurityConfig(
          private val jwtFilter: JwtFilter,
          @Value("\${app.cors.allowed-origins}")
-         private val allowedOrigins: String
+         private val allowedOrigins: String,
+         private val rateLimitingFilter: RateLimitingFilter
 ) {
 
     private val logger = LoggerFactory.getLogger(SecurityConfig::class.java)
@@ -32,23 +37,30 @@ class SecurityConfig(
             .cors { it.configurationSource(corsConfigurationSource()) }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers { headers ->
+                headers.frameOptions { it.deny() }
+                    .xssProtection { it.disable() }
+                    .contentSecurityPolicy { it.policyDirectives("default-src 'self'") }
+            }
             .authorizeHttpRequests { authorize ->
                 logger.info("Security config")
                 authorize
                     .requestMatchers("/api/v1/auth/**").permitAll()
-                    .requestMatchers("/api/v1/products", "/api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers("/api/v1/products", "/api/v1/products/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/product-vendors", "/api/v1/product-vendors/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
-                    .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMIN, VENDOR")
+                    .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/reports", "/api/v1/reports/**").hasAnyRole("ADMIN, VENDOR")
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro
                     .requestMatchers("/actuator/health").permitAll()  // Permitir health check
                     .requestMatchers("/actuator/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
+            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
             .httpBasic { it.disable() }
 
