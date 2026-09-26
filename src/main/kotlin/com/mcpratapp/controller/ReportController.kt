@@ -4,6 +4,7 @@ import com.mcpratapp.dto.response.SalesReportResponse
 import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.ReportService
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -23,8 +24,8 @@ class ReportController(
         @RequestParam(required = false) status: OrderStatus?,
         @RequestParam(required = false) clientId: UUID?,
         @RequestParam(required = false) vendorId: UUID?,
-        @RequestParam(required = false) startDate: LocalDateTime?,
-        @RequestParam(required = false) endDate: LocalDateTime?
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) startDate: LocalDateTime?,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) endDate: LocalDateTime?
     ): ResponseEntity<SalesReportResponse> {
         val currentUser = SecurityUtils.getCurrentUser()
         val report = reportService.generateSalesReport(

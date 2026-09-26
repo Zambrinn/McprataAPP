@@ -15,7 +15,7 @@ import java.util.UUID
 @Service
 @Transactional(readOnly = true)
 class ReportService(
-    private val orderRepository: OrderRepository
+    private val orderService: OrderService
 ) {
 
     fun generateSalesReport(
@@ -26,14 +26,13 @@ class ReportService(
         endDate: LocalDateTime?,
         requester: AuthenticatedUser
     ): SalesReportResponse {
-        val effectiveVendorId = if (requester.role == Role.VENDOR) requester.id else vendorId
-
-        val orders = orderRepository.findOrdersWithFilters(
+        val orders = orderService.getOrdersEntities(
             status = status,
             clientId = clientId,
-            vendorId = effectiveVendorId,
+            vendorId = vendorId,
             startDate = startDate,
-            endDate = endDate
+            endDate = endDate,
+            requester = requester
         )
 
         val paidOrders = orders.filter { it.status == OrderStatus.CONFIRMED || it.status == OrderStatus.DELIVERED }
