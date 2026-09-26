@@ -9,6 +9,10 @@ import java.util.UUID
 interface ClientRepository : JpaRepository<Client, UUID> {
     fun findByEmail(email: String): Client?
     fun findByWhatsappNumber(whatsappNumber: String): Client?
+    fun findByCpf(cpf: String): Client?
+    fun findByCnpj(cnpj: String): Client?
     fun existsByWhatsappNumberAndIdNot(whatsappNumber: String, id: UUID): Boolean
     fun existsByEmailAndIdNot(email: String, id: UUID): Boolean
+    fun existsByCpfAndIdNot(cpf: String, id: UUID): Boolean
+    fun existsByCnpjAndIdNot(cnpj: String, id: UUID): Boolean
 }

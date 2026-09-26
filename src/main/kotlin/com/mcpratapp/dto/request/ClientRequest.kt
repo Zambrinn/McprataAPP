@@ -13,5 +13,7 @@ data class ClientRequest (
     val email: String,
     @field:NotBlank(message = "O endereço não pode ser nulo")
     val address: String,
+    val cpf: String? = null,
+    val cnpj: String? = null,
     val companyName: String?,
 )
