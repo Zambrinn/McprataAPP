@@ -36,7 +36,7 @@ class JwtFilter(
             return
         }
 
-        if (uri.startsWith("api/v1/auth/")) {
+        if (uri.startsWith("/api/v1/auth/") || uri == "/api/v1/auth") {
             logger.info("JwtFilter - Auth endpoint, sem validação JWT")
             filterChain.doFilter(request, response)
             return
