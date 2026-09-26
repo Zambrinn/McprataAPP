@@ -30,7 +30,7 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: mcprata-app
+          ECR_REPOSITORY: prod/mcprata
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Build da imagem com o Dockerfile multi-stage
