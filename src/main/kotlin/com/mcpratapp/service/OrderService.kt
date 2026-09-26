@@ -274,14 +274,14 @@ class OrderService (
         return orderRepository.save(order).toResponse()
     }
 
-    fun getOrders(
+    fun getOrdersEntities(
         status: OrderStatus?,
         clientId: UUID?,
         vendorId: UUID?,
         startDate: LocalDateTime?,
         endDate: LocalDateTime?,
         requester: AuthenticatedUser
-    ): List<OrderResponse> {
+    ): List<Order> {
         val criteriaBuilder = entityManager.criteriaBuilder
         val query = criteriaBuilder.createQuery(Order::class.java)
         val root = query.from(Order::class.java)
@@ -313,7 +313,18 @@ class OrderService (
             .where(*predicates.toTypedArray())
             .orderBy(criteriaBuilder.desc(root.get<LocalDateTime>("createdAt")))
 
-        return entityManager.createQuery(query).resultList.map { it.toResponse() }
+        return entityManager.createQuery(query).resultList
+    }
+
+    fun getOrders(
+        status: OrderStatus?,
+        clientId: UUID?,
+        vendorId: UUID?,
+        startDate: LocalDateTime?,
+        endDate: LocalDateTime?,
+        requester: AuthenticatedUser
+    ): List<OrderResponse> {
+        return getOrdersEntities(status, clientId, vendorId, startDate, endDate, requester).map { it.toResponse() }
     }
 
     fun getOrderByID(orderId: UUID): OrderResponse? {
