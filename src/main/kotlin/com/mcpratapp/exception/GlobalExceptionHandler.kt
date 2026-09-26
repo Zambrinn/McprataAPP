@@ -53,6 +53,19 @@ class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(body)
     }
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(
+        exception: IllegalArgumentException,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        return buildResponse(
+            status = HttpStatus.BAD_REQUEST,
+            message = exception.message ?: "Requisição inválida.",
+            path = request.requestURI
+        )
+    }
+
     @ExceptionHandler(ForbidenException::class)
     fun handleForbidden(
         exception: ForbidenException,

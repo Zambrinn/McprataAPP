@@ -31,6 +31,12 @@ class Client (
     @Column(nullable = true, length = 150)
     var companyName: String? = null,
 
+    @Column(name = "cpf", nullable = true, unique = true, length = 11)
+    var cpf: String? = null,
+
+    @Column(name = "cnpj", nullable = true, unique = true, length = 14)
+    var cnpj: String? = null,
+
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
 

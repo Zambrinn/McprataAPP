@@ -16,21 +16,20 @@ import java.time.LocalDateTime
 @Service
 @Transactional(readOnly = true)
 class DashboardService (
-    private val orderRepository: OrderRepository
+    private val orderService: OrderService
 ) {
     fun getDashboardSummary(
         startDate: LocalDateTime?,
         endDate: LocalDateTime?,
         requester: AuthenticatedUser
     ): DashboardSummaryResponse {
-        val effectiveVendorId = if (requester.role == Role.VENDOR) requester.id else null
-
-        val orders = orderRepository.findOrdersWithFilters(
+        val orders = orderService.getOrdersEntities(
             status = null,
             clientId = null,
-            vendorId = effectiveVendorId,
+            vendorId = null,
             startDate = startDate,
-            endDate = endDate
+            endDate = endDate,
+            requester = requester
         )
 
         val totalOrders = orders.size.toLong()

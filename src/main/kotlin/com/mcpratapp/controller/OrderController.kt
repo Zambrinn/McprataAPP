@@ -7,6 +7,7 @@ import com.mcpratapp.dto.request.OrderRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.OrderStatus
+import com.mcpratapp.model.Role
 import com.mcpratapp.security.AuthenticatedUser
 import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.OrderService
@@ -32,7 +33,12 @@ class OrderController (
     @PostMapping
     fun createOrder(@Valid @RequestBody request: OrderRequest): ResponseEntity<OrderResponse> {
         val currentUser = SecurityUtils.getCurrentUser()
-        val order = orderService.createEmptyOrder(vendorId = currentUser.id, clientId = request.clientId)
+        val effectiveVendorId = if (currentUser.role == Role.ADMIN && request.vendorId != null) {
+            request.vendorId
+        } else {
+            currentUser.id
+        }
+        val order = orderService.createEmptyOrder(vendorId = effectiveVendorId, clientId = request.clientId)
         return ResponseEntity.status(HttpStatus.CREATED).body(order)
     }
 
