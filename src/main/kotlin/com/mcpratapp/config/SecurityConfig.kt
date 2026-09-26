@@ -45,6 +45,11 @@ class SecurityConfig(
             .authorizeHttpRequests { authorize ->
                 logger.info("Security config")
                 authorize
+                    .requestMatchers(
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html"
+                    ).permitAll()
                     .requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/products", "/api/v1/products/**").hasRole("ADMIN")
@@ -54,7 +59,7 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMIN", "VENDOR")
-                    .requestMatchers("/api/v1/reports", "/api/v1/reports/**").hasAnyRole("ADMIN, VENDOR")
+                    .requestMatchers("/api/v1/reports", "/api/v1/reports/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/error").permitAll()  // Permitir endpoint de erro
                     .requestMatchers("/actuator/health").permitAll()  // Permitir health check
                     .requestMatchers("/actuator/**").hasRole("ADMIN")

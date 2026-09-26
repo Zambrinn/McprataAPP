@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.ProductVendorRequest
 import com.mcpratapp.dto.request.ProductVendorUpdateRequest
 import com.mcpratapp.dto.response.ProductVendorResponse
 import com.mcpratapp.exception.ConflictException
+import com.mcpratapp.exception.ForbidenException
 import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.ProductVendor
 import com.mcpratapp.model.Role
@@ -11,6 +12,7 @@ import com.mcpratapp.model.UserStatus
 import com.mcpratapp.repository.ProductRepository
 import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
+import com.mcpratapp.security.SecurityUtils
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -25,6 +27,11 @@ class ProductVendorService (
     private val userRepository: UserRepository
 ) {
     fun createProductVendor(request: ProductVendorRequest): ProductVendorResponse {
+        val currentUser = SecurityUtils.getCurrentUser()
+        if (currentUser.role == Role.VENDOR && request.vendorId != currentUser.id) {
+            throw ForbidenException("Vendedores só podem vincular produtos a si mesmos.")
+        }
+
         val product = productRepository.findByIdOrNull(request.productId)
             ?: throw ResourceNotFoundException("Produto não encontrado com id: ${request.productId}")
 
@@ -39,12 +46,19 @@ class ProductVendorService (
             throw ConflictException("Não é possível vincular produto a um vendedor inativo.")
         }
 
-        if (vendor.role != Role.VENDOR) {
-            throw ConflictException("Só é possível vincular produtos a usuários vendedores.")
+        if (vendor.role != Role.VENDOR && vendor.role != Role.ADMIN) {
+            throw ConflictException("Só é possível vincular produtos a vendedores ou administradores.")
         }
 
-        if (productVendorRepository.existsByVendorIdAndProductId(request.vendorId, request.productId)) {
-            throw ConflictException("Este vendedor já possui vínculo com este produto.")
+        val existing = productVendorRepository.findByVendorIdAndProductId(request.vendorId, request.productId)
+        if (existing != null) {
+            if (existing.isActive) {
+                throw ConflictException("Este vendedor já possui vínculo ativo com este produto.")
+            }
+            existing.isActive = true
+            existing.price = request.price
+            existing.updatedAt = LocalDateTime.now()
+            return productVendorRepository.save(existing).toResponse()
         }
 
         val productVendor = ProductVendor(
@@ -83,8 +97,13 @@ class ProductVendorService (
     }
 
     fun updateProductVendor(id: UUID, request: ProductVendorUpdateRequest): ProductVendorResponse {
+        val currentUser = SecurityUtils.getCurrentUser()
         val productVendor = productVendorRepository.findByIdOrNull(id)
             ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        if (currentUser.role == Role.VENDOR && productVendor.vendor.id != currentUser.id) {
+            throw ForbidenException("Você não tem permissão para alterar vínculos de outros vendedores.")
+        }
 
         productVendor.price = request.price
         productVendor.updatedAt = LocalDateTime.now()
@@ -93,8 +112,13 @@ class ProductVendorService (
     }
 
     fun deactivateProductVendor(id: UUID): ProductVendorResponse {
+        val currentUser = SecurityUtils.getCurrentUser()
         val productVendor = productVendorRepository.findByIdOrNull(id)
             ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        if (currentUser.role == Role.VENDOR && productVendor.vendor.id != currentUser.id) {
+            throw ForbidenException("Você não tem permissão para desativar vínculos de outros vendedores.")
+        }
 
         if (!productVendor.isActive) {
             throw ConflictException("Vínculo produto-vendedor já está inativo.")
@@ -107,8 +131,13 @@ class ProductVendorService (
     }
 
     fun restoreProductVendor(id: UUID): ProductVendorResponse {
+        val currentUser = SecurityUtils.getCurrentUser()
         val productVendor = productVendorRepository.findByIdOrNull(id)
             ?: throw ResourceNotFoundException("Vínculo produto-vendedor não encontrado com id: $id")
+
+        if (currentUser.role == Role.VENDOR && productVendor.vendor.id != currentUser.id) {
+            throw ForbidenException("Você não tem permissão para reativar vínculos de outros vendedores.")
+        }
 
         if (productVendor.isActive) {
             throw ConflictException("Vínculo produto-vendedor já está ativo.")

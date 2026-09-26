@@ -6,12 +6,13 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 
 data class RegisterRequest(
-    @Email
+    @field:NotBlank(message = "O e-mail não pode ser nulo")
+    @field:Email(message = "E-mail inválido")
     val email: String,
-    @NotBlank(message = "A senha não pode ser nula")
+    @field:NotBlank(message = "A senha não pode ser nula")
     val password: String,
-    @NotBlank(message = "Nome não pode ser nulo")
+    @field:NotBlank(message = "Nome não pode ser nulo")
     val name: String,
-    @NotNull(message = "O cargo não pode ser nulo")
+    @field:NotNull(message = "O cargo não pode ser nulo")
     val role: Role
 )
