@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -17,17 +17,28 @@ import kotlin.time.Duration.Companion.milliseconds
 class RateLimitingFilter (
     private val objectMapper: ObjectMapper
 ): OncePerRequestFilter() {
-    private val authLimit = 10
-    private val generalLimit = 10
+    private val authLimit = 60
+    private val generalLimit = 1000
     private val timeWindowMs = 60_000L
 
     private val requestCounts = ConcurrentHashMap<String, RateLimitCounter>()
+
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
+        if (request.method.equals("OPTIONS", ignoreCase = true)) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        if (request.servletPath.startsWith("/swagger-ui") || request.servletPath.startsWith("/v3/api-docs")) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         val clientIp = request.getHeader("X-Forwarded-For")?.split(",")?.firstOrNull()?.trim()
             ?: request.remoteAddr
             ?: "unknown"
