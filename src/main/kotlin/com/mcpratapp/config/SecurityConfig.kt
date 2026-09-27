@@ -80,7 +80,7 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val config = CorsConfiguration().apply {
-            allowedOrigins = this@SecurityConfig.allowedOrigins.split(",")
+            allowedOriginPatterns = listOf("*")
             allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             allowedHeaders = listOf("*")
             exposedHeaders = listOf("Authorization")
@@ -88,7 +88,7 @@ class SecurityConfig(
             maxAge = 3600
         }
 
-        logger.info("CORS configurado para: http://localhost:5173")
+        logger.info("CORS configurado para aceitar requests do CloudFront e localhost")
 
        val source = UrlBasedCorsConfigurationSource()
        source.registerCorsConfiguration("/**", config)
