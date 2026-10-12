@@ -28,22 +28,19 @@ class JwtFilter(
         val uri = request.servletPath  // servletPath em vez de requestURI
         val method = request.method
 
-        logger.info("JwtFilter - Requisição: $method $uri")
+        logger.debug("JwtFilter - Requisição: $method $uri")
 
         if (method == "OPTIONS") {
-            logger.info("JwtFilter - Preflight request (OPTIONS), permitindo...")
             filterChain.doFilter(request, response)
             return
         }
 
         if (uri.startsWith("/api/v1/auth/") || uri == "/api/v1/auth") {
-            logger.info("JwtFilter - Auth endpoint, sem validação JWT")
             filterChain.doFilter(request, response)
             return
         }
 
         val authHeader = request.getHeader("Authorization")
-        logger.info("JwtFilter Authorization header: ${authHeader?.take(20)}...")
 
         val token = authHeader?.removePrefix("Bearer ")
 
@@ -61,7 +58,7 @@ class JwtFilter(
                 SecurityContextHolder.getContext().authentication = auth
             }
         } else {
-            logger.warn("JwtFilter Token inválido ou ausente")
+            logger.warn("Token JWT invalido ou expirado para o path: {}", uri)
         }
 
         filterChain.doFilter(request, response)

@@ -26,6 +26,7 @@ import com.mcpratapp.security.AuthenticatedUser
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import org.aspectj.weaver.ast.Or
+import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -44,6 +45,8 @@ class OrderService (
     private val userRepository: UserRepository,
     private val entityManager: EntityManager
 ) {
+    private val logger = LoggerFactory.getLogger(OrderService::class.java)
+
     fun createEmptyOrder(vendorId: UUID, clientId: UUID): OrderResponse {
         val vendor = userRepository.findById(vendorId)
             .orElseThrow { ResourceNotFoundException("Vendedor não encontrado.") }
@@ -66,6 +69,7 @@ class OrderService (
         )
 
         val createdEmptyOrder = orderRepository.save(orderToSave)
+        logger.info("Novo pedido iniciado: orderId={}, clientId={}, vendorId={}", createdEmptyOrder.id, client.id, vendor.id)
         return createdEmptyOrder.toResponse()
     }
 
@@ -229,6 +233,7 @@ class OrderService (
         paymentRepository.save(payment)
         productRepository.saveAll(existingOrder.items.map { it.product })
         orderRepository.save(existingOrder)
+        logger.info("Pagamento confirmado: orderId={}, paymentId={}, valor={}, metodo={}", existingOrder.id, payment.id, payment.amount, payment.method)
 
         return existingOrder.toResponse()
     }
@@ -246,6 +251,7 @@ class OrderService (
         existingOrder.status = OrderStatus.DELIVERED
         existingOrder.deliveredAt = LocalDateTime.now()
 
+        logger.info("Pedido entregue com sucesso: orderId={}, entreguePor={}", orderId, requester.id)
         return orderRepository.save(existingOrder).toResponse()
     }
 
@@ -271,6 +277,7 @@ class OrderService (
         order.status = OrderStatus.CANCELED
 
         productRepository.saveAll(order.items.map { it.product })
+        logger.warn("Pedido cancelado com sucesso: orderId={}, canceladoPor={}", orderId, requester.id)
         return orderRepository.save(order).toResponse()
     }
 

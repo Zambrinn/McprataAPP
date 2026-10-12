@@ -1,6 +1,8 @@
 package com.mcpratapp.exception
 
 import jakarta.servlet.http.HttpServletRequest
+import org.aspectj.bridge.Message
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -9,12 +11,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(ResourceNotFoundException::class)
     fun handleNotFound(
         exception: ResourceNotFoundException,
         request: HttpServletRequest
     ): ResponseEntity<ApiError> {
+        logger.warn("Recurso nao encontrado no path [{}]: {}", request.requestURI)
         return buildResponse(
             status = HttpStatus.NOT_FOUND,
             message = exception.message ?: "Recurso não encontrado.",
@@ -27,6 +31,7 @@ class GlobalExceptionHandler {
         exception: ConflictException,
         request: HttpServletRequest
     ): ResponseEntity<ApiError> {
+        logger.warn("Conflito de negócio no path [{}]: {}", request.requestURI, exception.message)
         return buildResponse(
             status = HttpStatus.CONFLICT,
             message = exception.message ?: "Conflito na operação.",
@@ -43,6 +48,8 @@ class GlobalExceptionHandler {
             it.field to (it.defaultMessage ?: "Valor inválido.")
         }
 
+        logger.warn("Falha de validacao no path [{}]: campos={}", request.requestURI, errors.keys)
+
         val body = ApiError(
             status = HttpStatus.BAD_REQUEST.value(),
             error = HttpStatus.BAD_REQUEST.reasonPhrase,
@@ -52,6 +59,19 @@ class GlobalExceptionHandler {
         )
 
         return ResponseEntity.badRequest().body(body)
+    }
+
+    @ExceptionHandler(Exception::class)
+    fun handleGenericException(
+        exception: Exception,
+        request: HttpServletRequest
+    ): ResponseEntity<ApiError> {
+        logger.error("Erro interno nao tratado no path [{}]: {}", request.requestURI, exception.message, exception)
+        return buildResponse(
+            status = HttpStatus.INTERNAL_SERVER_ERROR,
+            message = "Ocorreu um erro interno no servidor. Tente novamente mais tarde.",
+            path = request.requestURI
+        )
     }
 
     @ExceptionHandler(IllegalArgumentException::class)
