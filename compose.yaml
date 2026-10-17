@@ -41,5 +41,6 @@ services:
       - SPRING_DATASOURCE_PASSWORD=zambrin
       - SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true
       - APP_JWT_SECRET=${APP_JWT_SECRET}
+      - RABBITMQ_HOST=rabbitmq
 volumes:
   pgdata:
