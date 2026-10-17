@@ -2,12 +2,14 @@ package com.mcpratapp.service
 
 import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.request.OrderDiscountRequest
+import com.mcpratapp.dto.request.PaymentProcessMessage
 import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.exception.ForbidenException
 import com.mcpratapp.exception.ResourceNotFoundException
+import com.mcpratapp.messaging.port.PaymentQueueProducer
 import com.mcpratapp.model.Order
 import com.mcpratapp.model.OrderItem
 import com.mcpratapp.model.OrderStatus
@@ -24,6 +26,7 @@ import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
 import com.mcpratapp.security.AuthenticatedUser
 import jakarta.persistence.EntityManager
+import jakarta.persistence.criteria.Predicate
 import jakarta.transaction.Transactional
 import org.aspectj.weaver.ast.Or
 import org.slf4j.LoggerFactory
@@ -43,7 +46,8 @@ class OrderService (
     private val productVendorRepository: ProductVendorRepository,
     private val paymentRepository: PaymentRepository,
     private val userRepository: UserRepository,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
+    private val paymentQueueProducer: PaymentQueueProducer
 ) {
     private val logger = LoggerFactory.getLogger(OrderService::class.java)
 
@@ -196,7 +200,18 @@ class OrderService (
             amount = existingOrder.totalAmount
         )
 
-        return paymentRepository.save(payment).toResponse()
+        val savedPayment = paymentRepository.save(payment)
+
+        paymentQueueProducer.enqueuePayment(
+            PaymentProcessMessage(
+                orderId = orderId,
+                paymentId = savedPayment.id!!,
+                amount = savedPayment.amount!!,
+                paymentMethod = paymentMethod
+            )
+        )
+
+        return savedPayment.toResponse()
     }
 
     fun confirmPayment(orderId: UUID, paymentId: UUID): OrderResponse {
@@ -292,7 +307,7 @@ class OrderService (
         val criteriaBuilder = entityManager.criteriaBuilder
         val query = criteriaBuilder.createQuery(Order::class.java)
         val root = query.from(Order::class.java)
-        val predicates = mutableListOf<jakarta.persistence.criteria.Predicate>()
+        val predicates = mutableListOf<Predicate>()
         val effectiveVendorId = if (requester.role == Role.VENDOR) requester.id else vendorId
 
         status?.let {
