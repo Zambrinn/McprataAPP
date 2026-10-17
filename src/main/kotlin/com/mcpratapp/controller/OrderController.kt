@@ -11,8 +11,10 @@ import com.mcpratapp.model.Role
 import com.mcpratapp.security.AuthenticatedUser
 import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.OrderService
+import com.mcpratapp.service.SseService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -22,13 +24,15 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.time.LocalDateTime
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/orders")
 class OrderController (
-    private val orderService: OrderService
+    private val orderService: OrderService,
+    private val sseService: SseService
 ) {
     @PostMapping
     fun createOrder(@Valid @RequestBody request: OrderRequest): ResponseEntity<OrderResponse> {
@@ -101,5 +105,11 @@ class OrderController (
         val currentUser = SecurityUtils.getCurrentUser()
         val order = orderService.applyDiscount(orderId, request, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
+    }
+
+    @GetMapping("/{orderId}/payment-stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun streamPaymentStatus(@PathVariable orderId: UUID): SseEmitter {
+        return sseService.subscribe(orderId)
+
     }
 }
