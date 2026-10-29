@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.request.OrderDiscountRequest
 import com.mcpratapp.dto.request.OrderItemRequest
 import com.mcpratapp.dto.request.OrderRequest
+import com.mcpratapp.dto.request.UpdateOrderItemRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.OrderStatus
@@ -16,6 +17,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -53,6 +55,27 @@ class OrderController (
         val currentUser = SecurityUtils.getCurrentUser()
         val order = orderService.addItemToOrder(orderId, request.productId, request.quantity, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
+    }
+
+    @DeleteMapping("/{orderId}/items/{itemId}")
+    fun removeItemFromOrder(
+        @PathVariable orderId: UUID,
+        @PathVariable itemId: UUID
+    ): ResponseEntity<OrderResponse> {
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.removeItemFromOrder(orderId, itemId, currentUser)
+        return ResponseEntity.ok(order)
+    }
+
+    @PatchMapping("/{orderId}/items/{itemId}")
+    fun updateItemQuantity(
+        @PathVariable orderId: UUID,
+        @PathVariable itemId: UUID,
+        @Valid @RequestBody request: UpdateOrderItemRequest
+    ): ResponseEntity<OrderResponse> {
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.updateItemQuantity(orderId, itemId, request.quantity, currentUser)
+        return ResponseEntity.ok(order)
     }
 
     @PostMapping("/{orderId}/confirm")
