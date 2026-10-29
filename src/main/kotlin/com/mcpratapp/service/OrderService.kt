@@ -1,13 +1,14 @@
 package com.mcpratapp.service
 
-import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.request.OrderDiscountRequest
+import com.mcpratapp.dto.request.PaymentProcessMessage
 import com.mcpratapp.dto.response.OrderItemResponse
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.exception.ForbidenException
 import com.mcpratapp.exception.ResourceNotFoundException
+import com.mcpratapp.messaging.port.PaymentQueueProducer
 import com.mcpratapp.model.Order
 import com.mcpratapp.model.OrderItem
 import com.mcpratapp.model.OrderStatus
@@ -24,15 +25,14 @@ import com.mcpratapp.repository.ProductVendorRepository
 import com.mcpratapp.repository.UserRepository
 import com.mcpratapp.security.AuthenticatedUser
 import jakarta.persistence.EntityManager
+import jakarta.persistence.criteria.Predicate
 import jakarta.transaction.Transactional
-import org.aspectj.weaver.ast.Or
 import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
-import kotlin.system.exitProcess
 
 @Service
 @Transactional
@@ -43,7 +43,9 @@ class OrderService (
     private val productVendorRepository: ProductVendorRepository,
     private val paymentRepository: PaymentRepository,
     private val userRepository: UserRepository,
-    private val entityManager: EntityManager
+    private val entityManager: EntityManager,
+    private val paymentQueueProducer: PaymentQueueProducer,
+    private val stripeService: StripeService
 ) {
     private val logger = LoggerFactory.getLogger(OrderService::class.java)
 
@@ -196,7 +198,27 @@ class OrderService (
             amount = existingOrder.totalAmount
         )
 
-        return paymentRepository.save(payment).toResponse()
+        if (paymentMethod == PaymentMethod.CREDIT_CARD) {
+            val stripeResult = stripeService.createPaymentIntent(orderId, existingOrder.totalAmount)
+            payment.stripePaymentIntentId = stripeResult.paymentIntentId
+            payment.stripeClientSecret = stripeResult.clientSecret
+
+            val savedPayment = paymentRepository.save(payment)
+            savedPayment.stripeClientSecret = stripeResult.clientSecret
+            return savedPayment.toResponse()
+        }
+        val savedPayment = paymentRepository.save(payment)
+
+        paymentQueueProducer.enqueuePayment(
+            PaymentProcessMessage(
+                orderId = orderId,
+                paymentId = savedPayment.id!!,
+                amount = savedPayment.amount!!,
+                paymentMethod = paymentMethod
+            )
+        )
+
+        return savedPayment.toResponse()
     }
 
     fun confirmPayment(orderId: UUID, paymentId: UUID): OrderResponse {
@@ -292,7 +314,7 @@ class OrderService (
         val criteriaBuilder = entityManager.criteriaBuilder
         val query = criteriaBuilder.createQuery(Order::class.java)
         val root = query.from(Order::class.java)
-        val predicates = mutableListOf<jakarta.persistence.criteria.Predicate>()
+        val predicates = mutableListOf<Predicate>()
         val effectiveVendorId = if (requester.role == Role.VENDOR) requester.id else vendorId
 
         status?.let {
@@ -339,6 +361,101 @@ class OrderService (
         return foundOrder?.toResponse()
     }
 
+    fun handleStripePaymentSucceeded(stripePaymentIntentId: String) {
+        val payment = paymentRepository.findByStripePaymentIntentId(stripePaymentIntentId)
+            ?: throw ResourceNotFoundException("Pagamento com intent $stripePaymentIntentId nao encontrado")
+
+        if (payment.status == PaymentStatus.PENDING) {
+            paymentQueueProducer.enqueuePayment(
+                PaymentProcessMessage(
+                    orderId = payment.order.id!!,
+                    paymentId = payment.id!!,
+                    amount = payment.amount!!,
+                    paymentMethod = payment.method
+                )
+            )
+            logger.info("Pagamento Stripe enfileirado para confirmacao: orderId={}, intent={}", payment.order.id, payment.stripePaymentIntentId)
+        }
+    }
+
+    fun removeItemFromOrder(orderId: UUID, itemId: UUID, requester: AuthenticatedUser): OrderResponse {
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(order, requester)
+
+        if (paymentRepository.findByOrderId(orderId) != null) {
+            throw ConflictException("Não é possível alterar uma venda com pagamento registrado.")
+        }
+
+        if (order.status != OrderStatus.PENDING) {
+            throw ConflictException("Só é possível remover itens de um pedido pendente.")
+        }
+
+        val itemToRemove = order.items.find { it.id == itemId }
+            ?: throw ResourceNotFoundException("Item não encontrado no pedido.")
+
+        val product = itemToRemove.product
+        product.reservedQuantity -= itemToRemove.quantity
+        productRepository.save(product)
+
+        order.items.remove(itemToRemove)
+        recalculateTotal(order)
+
+        val updatedOrder = orderRepository.save(order)
+        logger.info("Item {} removido do pedido {}. Novo total={}", itemId, orderId, updatedOrder.totalAmount)
+        return updatedOrder.toResponse()
+    }
+
+    fun updateItemQuantity(orderId: UUID, itemId: UUID, newQuantity: Int, requester: AuthenticatedUser): OrderResponse {
+        if (newQuantity <= 0) {
+            throw ConflictException("A quantidade deve ser maior que zero.")
+        }
+
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { ResourceNotFoundException("Pedido não encontrado.") }
+
+        assertVendorOwnership(order, requester)
+
+        if (paymentRepository.findByOrderId(orderId) != null) {
+            throw ConflictException("Não é possível alterar uma venda com pagamento registrado.")
+        }
+
+        if (order.status != OrderStatus.PENDING) {
+            throw ConflictException("Só é possível alterar itens de um pedido pendente.")
+        }
+
+        val item = order.items.find { it.id == itemId }
+            ?: throw ResourceNotFoundException("Item não encontrado no pedido.")
+
+        if (item.quantity == newQuantity) {
+            return order.toResponse()
+        }
+
+        val delta = newQuantity - item.quantity
+        val product = item.product
+
+        if (delta > 0) {
+            val availableStock = product.totalQuantity - product.reservedQuantity
+            if (availableStock < delta) {
+                throw ConflictException("Estoque insuficiente para '${product.name}'. Disponível para incremento: $availableStock, solicitado: $delta")
+            }
+            product.reservedQuantity += delta
+        } else {
+            product.reservedQuantity += delta
+        }
+        productRepository.save(product)
+
+        item.quantity = newQuantity
+        item.subtotal = item.unitPrice * newQuantity.toBigDecimal()
+
+        recalculateTotal(order)
+
+        val updatedOrder = orderRepository.save(order)
+        logger.info("Quantidade do item {} atualizada para {} no pedido {}. Novo total={}", itemId, newQuantity, orderId, updatedOrder.totalAmount)
+        return updatedOrder.toResponse()
+    }
+
     private fun calculateSubtotal(order: Order): BigDecimal {
         return order.items.fold(BigDecimal.ZERO) { total, item ->
             total + item.subtotal
@@ -346,7 +463,17 @@ class OrderService (
     }
 
     private fun recalculateTotal(order: Order) {
-        order.totalAmount = calculateSubtotal(order) - order.discountAmount
+        val subtotal = calculateSubtotal(order)
+        if (order.items.isEmpty()) {
+            order.discountAmount = BigDecimal.ZERO
+            order.totalAmount = BigDecimal.ZERO
+            return
+        }
+        val maxDiscount = subtotal * BigDecimal("0.20")
+        if (order.discountAmount > maxDiscount) {
+            order.discountAmount = maxDiscount
+        }
+        order.totalAmount = subtotal - order.discountAmount
     }
 
     private fun convertOrderItemToDto(item: OrderItem): OrderItemResponse {
@@ -385,6 +512,8 @@ class OrderService (
         return PaymentResponse(
             id = this.id ?: throw IllegalStateException("Pagamento salvo sem ID."),
             orderId = this.order.id ?: throw IllegalStateException("O pagamento precisa ter o id do pedido."),
+            stripePaymentIntentId = this.stripePaymentIntentId,
+            stripeClientSecret = this.stripeClientSecret,
             method = this.method,
             status = this.status,
             amount = this.amount,
