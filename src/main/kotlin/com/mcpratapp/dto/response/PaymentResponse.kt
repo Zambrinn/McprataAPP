@@ -8,6 +8,8 @@ import java.util.UUID
 
 data class PaymentResponse(
     val id: UUID,
+    val stripePaymentIntentId: String? = null,
+    val stripeClientSecret: String? = null,
     val orderId: UUID,
     val method: PaymentMethod,
     val status: PaymentStatus,

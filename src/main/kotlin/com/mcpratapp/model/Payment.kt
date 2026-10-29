@@ -31,7 +31,13 @@ class Payment(
     var paidAt: LocalDateTime? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+
+    @Column(name = "stripe_payment_intent_id", unique = true)
+    var stripePaymentIntentId: String? = null,
+
+    @Transient
+    var stripeClientSecret: String? = null
 )
 
 enum class PaymentMethod {

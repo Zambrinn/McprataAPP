@@ -33,6 +33,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_started
     environment:
       - SPRINGDOC.API-DOCS.PATH=/API-DOCS
       - SPRING_DOCKER_COMPOSE_ENABLED=false

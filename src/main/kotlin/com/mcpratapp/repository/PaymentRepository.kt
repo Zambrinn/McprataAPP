@@ -8,5 +8,6 @@ import java.util.UUID
 @Repository
 interface PaymentRepository : JpaRepository<Payment, UUID> {
     fun findByOrderId(orderId: UUID): Payment?
+    fun findByStripePaymentIntentId(stripePaymentIntentId: String): Payment?
 //    fun findByStatusAndCreatedAtAfter(...): List<Payment> metodo para usar no dashboard
 }

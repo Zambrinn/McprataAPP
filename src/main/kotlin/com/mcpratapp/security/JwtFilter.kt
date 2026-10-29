@@ -40,6 +40,11 @@ class JwtFilter(
             return
         }
 
+        if (uri == "/api/v1/payments/stripe/webhook") {
+            filterChain.doFilter(request, response)
+            return
+        }
+
         val authHeader = request.getHeader("Authorization")
 
         val token = authHeader?.removePrefix("Bearer ")
@@ -57,7 +62,7 @@ class JwtFilter(
                 )
                 SecurityContextHolder.getContext().authentication = auth
             }
-        } else {
+        } else if (token != null){
             logger.warn("Token JWT invalido ou expirado para o path: {}", uri)
         }
 
