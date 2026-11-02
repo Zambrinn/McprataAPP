@@ -5,7 +5,6 @@ import com.mcpratapp.dto.response.TopProductsResponse
 import com.mcpratapp.dto.response.VendorPerfomanceResponse
 import com.mcpratapp.model.OrderStatus
 import com.mcpratapp.model.Role
-import com.mcpratapp.repository.OrderRepository
 import com.mcpratapp.security.AuthenticatedUser
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

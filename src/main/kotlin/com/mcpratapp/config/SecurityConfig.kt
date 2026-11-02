@@ -56,6 +56,8 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/product-vendors", "/api/v1/product-vendors/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/orders/*/payment-stream").permitAll()
+                    .requestMatchers("/api/v1/payments/stripe/webhook").permitAll()
                     .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/payments", "/api/v1/payments/**").hasAnyRole("ADMIN", "VENDOR")
                     .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMIN", "VENDOR")

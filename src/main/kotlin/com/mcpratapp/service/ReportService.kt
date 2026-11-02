@@ -3,8 +3,6 @@ package com.mcpratapp.service
 import com.mcpratapp.dto.response.SalesReportItemResponse
 import com.mcpratapp.dto.response.SalesReportResponse
 import com.mcpratapp.model.OrderStatus
-import com.mcpratapp.model.Role
-import com.mcpratapp.repository.OrderRepository
 import com.mcpratapp.security.AuthenticatedUser
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

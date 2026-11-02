@@ -5,6 +5,12 @@ services:
     ports:
       - '5672:5672'
       - '15672:15672'
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
   postgres:
     image: 'postgres:15-alpine'
     container_name: mcprata_db
@@ -33,6 +39,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
     environment:
       - SPRINGDOC.API-DOCS.PATH=/API-DOCS
       - SPRING_DOCKER_COMPOSE_ENABLED=false
@@ -41,5 +51,8 @@ services:
       - SPRING_DATASOURCE_PASSWORD=zambrin
       - SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true
       - APP_JWT_SECRET=${APP_JWT_SECRET}
+      - RABBITMQ_HOST=rabbitmq
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
 volumes:
   pgdata:

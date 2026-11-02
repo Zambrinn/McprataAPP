@@ -52,16 +52,42 @@ class Order (
     var confirmedAt: LocalDateTime? = null,
 
     @Column(name = "delivered_at")
-    var deliveredAt: LocalDateTime? = null
-)
+    var deliveredAt: LocalDateTime? = null,
+
+    @Column(name = "canceled_at")
+    var canceledAt: LocalDateTime? = null
+) {
+    fun transitionTo(newStatus: OrderStatus) {
+        if (!this.status.canTransitionTo(newStatus)) {
+            throw IllegalStateException(
+                "Transição de status inválida: não é permitido mudar de ${this.status} para $newStatus"
+            )
+        }
+        this.status = newStatus
+
+        when(newStatus) {
+            OrderStatus.CONFIRMED -> this.confirmedAt = LocalDateTime.now()
+            OrderStatus.DELIVERED -> this.deliveredAt = LocalDateTime.now()
+            OrderStatus.CANCELED -> this.canceledAt = LocalDateTime.now()
+            else -> {}
+        }
+    }
+}
 
 enum class OrderStatus {
     PENDING,
     CONFIRMED,
-    SENT, // PREVISTO NO MODELO MAS NÃO USADO POR CONVENÇÃO
     DELIVERED,
-    CANCELED,
-    COMPLETED // PREVISTO NO MODELO MAS NÃO USADO POR CONVENÇÃO
+    CANCELED;
+
+    fun canTransitionTo(newStatus: OrderStatus): Boolean {
+        return when (this) {
+            OrderStatus.PENDING -> newStatus in listOf(CONFIRMED, OrderStatus.CANCELED)
+            OrderStatus.CONFIRMED -> newStatus in listOf(DELIVERED, OrderStatus.CANCELED)
+            OrderStatus.DELIVERED -> false
+            OrderStatus.CANCELED -> false
+        }
+    }
 }
 
 @Entity
@@ -80,13 +106,13 @@ class OrderItem (
     val product: Product,
 
     @Column(nullable = false)
-    val quantity: Int,
+    var quantity: Int,
 
     @Column(nullable = false, precision = 10, scale = 2)
-    val unitPrice: BigDecimal,
+    var unitPrice: BigDecimal,
 
     @Column(nullable = false, precision = 12, scale = 2)
-    val subtotal: BigDecimal,
+    var subtotal: BigDecimal,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vendor_id", nullable = false)

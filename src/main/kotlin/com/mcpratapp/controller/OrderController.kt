@@ -4,6 +4,7 @@ import com.mcpratapp.dto.request.ConfirmOrderRequest
 import com.mcpratapp.dto.request.OrderDiscountRequest
 import com.mcpratapp.dto.request.OrderItemRequest
 import com.mcpratapp.dto.request.OrderRequest
+import com.mcpratapp.dto.request.UpdateOrderItemRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.model.OrderStatus
@@ -11,9 +12,12 @@ import com.mcpratapp.model.Role
 import com.mcpratapp.security.AuthenticatedUser
 import com.mcpratapp.security.SecurityUtils
 import com.mcpratapp.service.OrderService
+import com.mcpratapp.service.SseService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -22,13 +26,15 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.time.LocalDateTime
 import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/orders")
 class OrderController (
-    private val orderService: OrderService
+    private val orderService: OrderService,
+    private val sseService: SseService
 ) {
     @PostMapping
     fun createOrder(@Valid @RequestBody request: OrderRequest): ResponseEntity<OrderResponse> {
@@ -49,6 +55,27 @@ class OrderController (
         val currentUser = SecurityUtils.getCurrentUser()
         val order = orderService.addItemToOrder(orderId, request.productId, request.quantity, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
+    }
+
+    @DeleteMapping("/{orderId}/items/{itemId}")
+    fun removeItemFromOrder(
+        @PathVariable orderId: UUID,
+        @PathVariable itemId: UUID
+    ): ResponseEntity<OrderResponse> {
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.removeItemFromOrder(orderId, itemId, currentUser)
+        return ResponseEntity.ok(order)
+    }
+
+    @PatchMapping("/{orderId}/items/{itemId}")
+    fun updateItemQuantity(
+        @PathVariable orderId: UUID,
+        @PathVariable itemId: UUID,
+        @Valid @RequestBody request: UpdateOrderItemRequest
+    ): ResponseEntity<OrderResponse> {
+        val currentUser = SecurityUtils.getCurrentUser()
+        val order = orderService.updateItemQuantity(orderId, itemId, request.quantity, currentUser)
+        return ResponseEntity.ok(order)
     }
 
     @PostMapping("/{orderId}/confirm")
@@ -101,5 +128,11 @@ class OrderController (
         val currentUser = SecurityUtils.getCurrentUser()
         val order = orderService.applyDiscount(orderId, request, currentUser)
         return ResponseEntity.status(HttpStatus.OK).body(order)
+    }
+
+    @GetMapping("/{orderId}/payment-stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun streamPaymentStatus(@PathVariable orderId: UUID): SseEmitter {
+        return sseService.subscribe(orderId)
+
     }
 }
