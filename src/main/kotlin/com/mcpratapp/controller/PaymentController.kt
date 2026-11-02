@@ -1,5 +1,6 @@
 package com.mcpratapp.controller
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.mcpratapp.dto.request.PaymentRequest
 import com.mcpratapp.dto.response.OrderResponse
 import com.mcpratapp.dto.response.PaymentResponse
@@ -21,14 +22,14 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
-import java.util.logging.Logger
 
 @RestController
 @RequestMapping("/api/v1/")
 class PaymentController (
     private val paymentService: PaymentService,
     private val orderService: OrderService,
-    private val stripeService: StripeService
+    private val stripeService: StripeService,
+    private val objectMapper: ObjectMapper
 )   {
     private val logger = LoggerFactory.getLogger(PaymentController::class.java)
     @GetMapping("/payments/{paymentId}")
@@ -66,11 +67,31 @@ class PaymentController (
     ): ResponseEntity<String> {
         try {
             val event = stripeService.validateWebhookSignature(payload, sigHeader)
+            logger.info("Webhook Stripe recebido e validado: eventType={}, eventId={}", event.type, event.id)
 
             if (event.type == "payment_intent.succeeded") {
-                val stripeObject = event.dataObjectDeserializer.`object`.orElse(null)
-                if (stripeObject is PaymentIntent) {
-                    orderService.handleStripePaymentSucceeded(stripeObject.id)
+                var paymentIntentId: String? = null
+
+                val deserialized = event.dataObjectDeserializer.`object`.orElse(null)
+                if (deserialized is PaymentIntent) {
+                    paymentIntentId = deserialized.id
+                } else {
+                    val unsafe = event.dataObjectDeserializer.deserializeUnsafe()
+                    if (unsafe is PaymentIntent) {
+                        paymentIntentId = unsafe.id
+                    }
+                }
+
+                if (paymentIntentId.isNullOrBlank()) {
+                    val rootNode = objectMapper.readTree(payload)
+                    paymentIntentId = rootNode.path("data").path("object").path("id").asText(null)
+                }
+
+                logger.info("Processando payment_intent.succeeded para intentId={}", paymentIntentId)
+                if (!paymentIntentId.isNullOrBlank()) {
+                    orderService.handleStripePaymentSucceeded(paymentIntentId)
+                } else {
+                    logger.warn("Não foi possível extrair paymentIntentId do evento {}", event.id)
                 }
             }
             return ResponseEntity.ok("Received")

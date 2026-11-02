@@ -1,5 +1,6 @@
 package com.mcpratapp.service
 
+import com.mcpratapp.exception.ConflictException
 import com.stripe.Stripe
 import com.stripe.model.Event
 import com.stripe.model.PaymentIntent
@@ -31,13 +32,17 @@ class StripeService (
     fun init() {
         if (stripeApiKey.isNotBlank()) {
             Stripe.apiKey = stripeApiKey
-            logger.info("Stripe SDK inicializado")
+            logger.info("Stripe SDK inicializado com sucesso.")
         } else {
-            logger.warn("STRIPE_API_KEY nao configurada! Pagamentos com cartao usarao modo simulado até configurar a chave.")
+            logger.warn("STRIPE_API_KEY não configurada no ambiente (.env)!")
         }
     }
 
     fun createPaymentIntent(orderId: UUID, amount: BigDecimal): StripeIntentResult {
+        if (stripeApiKey.isBlank()) {
+            throw ConflictException("Chave da Stripe (STRIPE_API_KEY) não está configurada no ambiente (.env).")
+        }
+
         val amountInCents = amount.multiply(BigDecimal(100)).toLong()
 
         val params = PaymentIntentCreateParams.builder()
