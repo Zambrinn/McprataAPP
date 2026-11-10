@@ -26,17 +26,17 @@ jobs:
       - name: Build and Package with Maven
         run: mvn -B clean package -DskipTests
 
-      - name: Check Podman Version
-        run: podman --version
+      - name: Check docker Version
+        run: docker --version
 
-      - name: Build Container Image with Podman
+      - name: Build Container Image with docker
         run: |
-          podman build \
+          docker build \
             -t mcprata-app:latest \
             -f Dockerfile .
 
-      - name: List Podman Images
-        run: podman images
+      - name: List docker Images
+        run: docker images
 
       - name: Create Pull Request to Main
         env:
@@ -49,7 +49,7 @@ jobs:
             echo "Nenhum PR encontrado. Criando novo Pull Request"
             gh pr create \
               --title "Auto PR: merge $BRANCH_NAME into main" \
-              --body "Pull Request criado automaticamente pela pipeline de CI após compilação e build da imagem Podman com sucesso!" \
+              --body "Pull Request criado automaticamente pela pipeline de CI após compilação e build da imagem docker com sucesso!" \
               --base main \
               --head "$BRANCH_NAME"
           else
