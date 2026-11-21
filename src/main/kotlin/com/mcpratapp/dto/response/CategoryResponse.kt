@@ -1,3 +1,10 @@
 package com.mcpratapp.dto.response
 
-data class CategoryResponse()
+import java.util.UUID
+
+data class CategoryResponse(
+    val id: UUID,
+    val name: String,
+    val skuPrefix: String?,
+    val isActive: Boolean
+)

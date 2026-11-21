@@ -1,4 +1,13 @@
 package com.mcpratapp.repository
 
-interface CategoryRepository {
+import com.mcpratapp.model.Category
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
+import java.util.UUID
+
+@Repository
+interface CategoryRepository : JpaRepository<Category, UUID> {
+    fun findByNameIgnoreCase(name: String): Category?
+    fun existsByNameIgnoreCaseAndIdNot(name: String, id: UUID): Boolean
+    fun findByAllIsActiveTrueOrderByNameAsc(): List<Category>
 }
