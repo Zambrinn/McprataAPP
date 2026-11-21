@@ -17,10 +17,10 @@ class Category(
     @GeneratedValue(strategy = GenerationType.UUID)
     val id: UUID ?= null,
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 150, unique = true)
     var name: String,
 
-    @Column(nullable = false, length = 150)
+    @Column(name = "sku_prefix", nullable = true, length = 10)
     var skuPrefix: String ?= null,
 
     @Column(nullable = false)

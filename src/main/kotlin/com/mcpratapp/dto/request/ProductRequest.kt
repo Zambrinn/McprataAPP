@@ -3,6 +3,7 @@ package com.mcpratapp.dto.request
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import java.util.UUID
 
 data class ProductRequest(
     @field:NotBlank(message = "SKU do produto não pode ser nulo")
@@ -13,4 +14,6 @@ data class ProductRequest(
     @field:NotNull(message = "A quantidade do produto não pode ser nula")
     @field:Min(value = 0, message = "A quantidade do produto não pode ser negativa")
     val totalQuantity: Int,
+    @field:NotNull(message = "A categoria do produto é obrigatória")
+    val categoryId: UUID
 )

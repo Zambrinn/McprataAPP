@@ -34,7 +34,7 @@ class CategoryService (
         return categoryRepository.save(category).toResponse()
     }
 
-    fun getAllActiveCategories(): List<CategoryResponse> =  categoryRepository.findByAllIsActiveTrueOrderByNameAsc()
+    fun getAllActiveCategories(): List<CategoryResponse> =  categoryRepository.findAllByIsActiveTrueOrderByNameAsc()
         .map { it.toResponse() }
 
     fun updateCategory(id: UUID, request: CategoryRequest): CategoryResponse {

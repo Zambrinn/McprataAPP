@@ -9,5 +9,5 @@ import java.util.UUID
 interface CategoryRepository : JpaRepository<Category, UUID> {
     fun findByNameIgnoreCase(name: String): Category?
     fun existsByNameIgnoreCaseAndIdNot(name: String, id: UUID): Boolean
-    fun findByAllIsActiveTrueOrderByNameAsc(): List<Category>
+    fun findAllByIsActiveTrueOrderByNameAsc(): List<Category>
 }
