@@ -8,6 +8,7 @@ import com.mcpratapp.exception.ResourceNotFoundException
 import com.mcpratapp.model.Role
 import com.mcpratapp.model.User
 import com.mcpratapp.model.UserStatus
+import com.mcpratapp.repository.RefreshTokenRepository
 import com.mcpratapp.repository.UserRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.domain.Page
@@ -22,6 +23,7 @@ import java.util.UUID
 @Transactional
 class UserService (
     private val userRepository: UserRepository,
+    private val refreshTokenRepository: RefreshTokenRepository,
     private val passwordEncoder: PasswordEncoder
 ) {
     fun createUser(request: UserRequest): UserResponse {
@@ -109,6 +111,7 @@ class UserService (
         }
         
         existingUser.status = UserStatus.INACTIVE
+        refreshTokenRepository.deleteByUser(existingUser)
         return userRepository.save(existingUser).toResponse()
     }
 
@@ -133,7 +136,13 @@ class UserService (
         val foundUser = userRepository.findByIdOrNull(userId)
             ?: throw ResourceNotFoundException("Usuário com id: ${userId} não encontrado.")
 
-        return userRepository.delete(foundUser)
+        if (foundUser.status == UserStatus.DELETED) {
+            throw ConflictException("O usuário já foi excluído.")
+        }
+
+        refreshTokenRepository.deleteByUser(foundUser)
+        foundUser.status = UserStatus.DELETED
+        userRepository.save(foundUser)
     }
 
     private fun User.toResponse(): UserResponse {
