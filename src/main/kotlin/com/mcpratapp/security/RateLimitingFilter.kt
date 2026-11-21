@@ -34,7 +34,11 @@ class RateLimitingFilter (
             return
         }
 
-        if (request.servletPath.startsWith("/swagger-ui") || request.servletPath.startsWith("/v3/api-docs")) {
+        if (
+            request.servletPath.startsWith("/swagger-ui") ||
+            request.servletPath.startsWith("/api-docs") ||
+            request.servletPath.startsWith("/v3/api-docs")
+        ) {
             filterChain.doFilter(request, response)
             return
         }

@@ -1,10 +1,13 @@
 package com.mcpratapp.service
 
 import com.mcpratapp.dto.request.ProductRequest
+import com.mcpratapp.dto.response.CategoryResponse
 import com.mcpratapp.dto.response.ProductResponse
 import com.mcpratapp.exception.ConflictException
 import com.mcpratapp.exception.ResourceNotFoundException
+import com.mcpratapp.model.Category
 import com.mcpratapp.model.Product
+import com.mcpratapp.repository.CategoryRepository
 import com.mcpratapp.repository.ProductRepository
 import jakarta.transaction.Transactional
 import org.springframework.data.repository.findByIdOrNull
@@ -15,13 +18,14 @@ import java.util.UUID
 @Transactional
 @Service
 class ProductService (
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val categoryRepository: CategoryRepository
 )   {
     fun createProduct(request: ProductRequest): ProductResponse {
         productRepository.findBySku(request.sku)?.let {
             throw ConflictException("Já existe um produto com esse SKU")
         }
-
+        val category = resolveActiveCategory(request.categoryId)
         val product = Product(
             sku = request.sku,
             name = request.name,
@@ -29,6 +33,7 @@ class ProductService (
             totalQuantity = request.totalQuantity,
             reservedQuantity = 0,
             isActive = true,
+            category = category
         )
         return productRepository.save(product).toResponse()
     }
@@ -55,11 +60,12 @@ class ProductService (
         if (request.totalQuantity < product.reservedQuantity) {
             throw ConflictException("A quantidade total não pode ser menor que a quantidade reservada")
         }
-
+        val category = resolveActiveCategory(request.categoryId)
         product.sku = request.sku
         product.name = request.name
         product.totalQuantity = request.totalQuantity
         product.description = request.description
+        product.category = category
 
         return productRepository.save(product).toResponse()
     }
@@ -103,7 +109,20 @@ class ProductService (
             totalQuantity = this.totalQuantity,
             reservedQuantity = this.reservedQuantity,
             isActive = this.isActive,
-            createdAt = this.createdAt
+            createdAt = this.createdAt,
+            category = this.category?.let {
+                CategoryResponse(id = it.id!!, name = it.name, skuPrefix = it.skuPrefix, isActive = it.isActive)
+            }
         )
+    }
+
+    private fun resolveActiveCategory(categoryId: UUID): Category {
+        val category = categoryRepository.findByIdOrNull(categoryId)
+            ?: throw ResourceNotFoundException("Categoria não encontrada com id: $categoryId")
+
+        if (!category.isActive) {
+            throw ConflictException("Não é possível vincular produto a uma categoria inativa")
+        }
+        return category
     }
 }

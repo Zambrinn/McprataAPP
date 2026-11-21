@@ -40,19 +40,30 @@ class SecurityConfig(
             .headers { headers ->
                 headers.frameOptions { it.deny() }
                     .xssProtection { it.disable() }
-                    .contentSecurityPolicy { it.policyDirectives("default-src 'self'") }
+                    .contentSecurityPolicy {
+                        it.policyDirectives(
+                            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+                        )
+                    }
             }
             .authorizeHttpRequests { authorize ->
                 logger.info("Security config")
                 authorize
                     .requestMatchers(
+                        "/api-docs",
+                        "/api-docs/**",
+                        "/v3/api-docs",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
-                        "/swagger-ui.html"
+                        "/swagger-ui.html",
+                        "/swagger-resources/**",
+                        "/webjars/**"
                     ).permitAll()
                     .requestMatchers("/api/v1/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/products", "/api/v1/products/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").hasAnyRole("VENDOR", "ADMIN")
+                    .requestMatchers("/api/v1/categories", "/api/v1/categories/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/product-vendors", "/api/v1/product-vendors/**").hasAnyRole("VENDOR", "ADMIN")
                     .requestMatchers("/api/v1/users", "/api/v1/users/**").hasRole("ADMIN")
                     .requestMatchers("/api/v1/clients", "/api/v1/clients/**").hasAnyRole("ADMIN", "VENDOR")

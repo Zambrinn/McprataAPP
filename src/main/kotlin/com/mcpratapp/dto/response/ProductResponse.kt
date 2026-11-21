@@ -11,5 +11,6 @@ data class ProductResponse(
     val totalQuantity: Int,
     val reservedQuantity: Int,
     val isActive: Boolean,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val category: CategoryResponse?
 )
