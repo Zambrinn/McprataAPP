@@ -35,12 +35,14 @@ class JwtFilter(
             return
         }
 
-        if (uri.startsWith("/api/v1/auth/") || uri == "/api/v1/auth") {
-            filterChain.doFilter(request, response)
-            return
-        }
-
-        if (uri == "/api/v1/payments/stripe/webhook") {
+        if (
+            uri.startsWith("/api/v1/auth/") ||
+            uri == "/api/v1/auth" ||
+            uri == "/api/v1/payments/stripe/webhook" ||
+            uri.startsWith("/swagger-ui") ||
+            uri.startsWith("/api-docs") ||
+            uri.startsWith("/v3/api-docs")
+        ) {
             filterChain.doFilter(request, response)
             return
         }

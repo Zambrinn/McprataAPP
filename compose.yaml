@@ -44,7 +44,7 @@ services:
     env_file:
       - .env
     environment:
-      - SPRINGDOC.API-DOCS.PATH=/API-DOCS
+      - SPRINGDOC_API_DOCS_PATH=/api-docs
       - SPRING_DOCKER_COMPOSE_ENABLED=false
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mcprata
       - SPRING_DATASOURCE_USERNAME=zambrin

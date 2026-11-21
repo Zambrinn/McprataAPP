@@ -6,6 +6,7 @@ import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
+import io.swagger.v3.oas.models.servers.Server
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -15,6 +16,7 @@ class OpenApiConfig {
     @Bean
     fun customOpenAPI(): OpenAPI {
         return OpenAPI()
+            .addServersItem(Server().url("/").description("Servidor Atual"))
             .info(
                 Info()
                     .title("MCPrataAPP REST Documentation")
